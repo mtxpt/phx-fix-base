@@ -5,13 +5,13 @@ import hmac
 import os
 import queue
 import random
+import ssl
 import string
 import time
-import ssl
 from datetime import datetime
 from logging import Logger
 from threading import Lock
-from typing import Optional, List, Dict, Tuple, AnyStr
+from typing import List, Dict, Tuple, AnyStr
 
 import quickfix as fix
 import quickfix44 as fix44
@@ -347,9 +347,9 @@ class App(fix.Application, FixInterface):
             entry_type = extract_message_field_value(fix.MDEntryType(), group, "")
             price = extract_message_field_value(fix.MDEntryPx(), group, "float")
             size = extract_message_field_value(fix.MDEntrySize(), group, "float")
-            date = extract_message_field_value(fix.StringField(272), group, "str")  # QuickFix bug
-            time = extract_message_field_value(fix.StringField(273), group, "str")
-            timestamp = str_to_datetime(f"{date}-{time}")
+            date_str = extract_message_field_value(fix.StringField(272), group, "str")  # QuickFix bug
+            time_str = extract_message_field_value(fix.StringField(273), group, "str")
+            timestamp = str_to_datetime(f"{date_str}-{time_str}")
 
             if entry_type == fix.MDEntryType_BID:
                 bids[price] = size
@@ -409,9 +409,9 @@ class App(fix.Application, FixInterface):
             price = extract_message_field_value(fix.MDEntryPx(), group, "float")
             size = extract_message_field_value(fix.MDEntrySize(), group, "float")
             side = None  # if we want to have the side of the trade we should get the trades via SBE
-            date = extract_message_field_value(fix.StringField(272), group, "str")  # QuickFix bug
-            time = extract_message_field_value(fix.StringField(273), group, "str")
-            element_ts = str_to_datetime(f"{date}-{time}")  # TODO clarify difference between element_ts and receive_ts
+            date_str = extract_message_field_value(fix.StringField(272), group, "str")  # QuickFix bug
+            time_str = extract_message_field_value(fix.StringField(273), group, "str")
+            element_ts = str_to_datetime(f"{date_str}-{time_str}")  # TODO clarify diff between element_ts / receive_ts
 
             if entry_type == fix.MDEntryType_TRADE:
                 trades.append(Trade(exchange, symbol, timestamp, receive_ts, side, price, size))
@@ -1072,5 +1072,3 @@ class App(fix.Application, FixInterface):
 
         for key, history in msg_hist.items():
             save(history, key)
-
-
