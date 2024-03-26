@@ -40,14 +40,14 @@ if __name__ == '__main__':
         print(f"Execution time for fast={fast}: {elapsed_time}sec")
         return elapsed_time
 
-    n = 10000
-    queue_time(n, True)
-    queue_time(n, False)
+    num_produced = 10000
+    queue_time(num_produced, True)
+    queue_time(num_produced, False)
 
     def timeit(m, fast):
         av = 0
         for i in range(m):
-            av += queue_time(n, True)
+            av += queue_time(num_produced, True)
         print(f"Average execution time for fast={fast}: {av/m}sec")
 
     timeit(10, True)

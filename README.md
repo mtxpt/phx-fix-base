@@ -1,8 +1,7 @@
 # Phoenix Prime FIX Client Application 
 
-This repository provides the foundations for FIX bases trading applications and is used 
-in the FIX client strategy example project. It is based on the widely used [QuickFix](https://quickfixengine.org) 
-open source FIX library and application framework. 
+This repository provides the foundations for FIX based trading applications based on the widely used 
+[QuickFix](https://quickfixengine.org) open source library and its application framework.
 
 
 ## Installation 
@@ -17,9 +16,6 @@ scripts/setup_all.sh [clean]
 ```
 
 Note that `setup_all.sh` also builds a custom QuickFix version for `arm64` architecture. 
-
-By specifying environment variable `ROOT_CERTIFICATE` a root certificate is 
-used to configure the global certificate used by `pip3 install` and `conda install`.
 
 Alternatively a Python environment can be created and the `requirements.txt` can 
 be installed directly as follows 
