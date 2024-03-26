@@ -6,6 +6,8 @@ import os
 import queue
 import random
 import string
+import time
+import ssl
 from datetime import datetime
 from logging import Logger
 from threading import Lock
@@ -112,22 +114,32 @@ class App(fix.Application, FixInterface):
             username = self.fix_settings.get(session_id).getString("Username")
             password = self.fix_settings.get(session_id).getString("Password")
             auth_by_key = self.fix_settings.get(session_id).getString("AuthenticateByKey")
-            if auth_by_key == "Y":
-                self.logger.info(f"login with username={username}: using key based authentication scheme with hmac")
+            if auth_by_key in ["Latest", "Y"]:
+                self.app_log.info(f"login with username={username}: using key based authentication scheme with hmac")
                 random_str = App.get_random_string(8)
                 secret_key = password
-                signature = hmac.new(
-                    bytes(secret_key, "utf-8"),
-                    bytes(random_str, "utf-8"),
-                    digestmod=hashlib.sha256
-                ).digest()
+                if auth_by_key == "Y":
+                    signature = hmac.new(
+                        bytes(secret_key, "utf-8"),
+                        bytes(random_str, "utf-8"),
+                        digestmod=hashlib.sha256
+                    ).digest()
+                elif auth_by_key == "Latest":
+                    random_str = str(round(time.time() * 1000)) + '.' + str(ssl.RAND_bytes(64))
+                    signature = hmac.new(
+                        secret_key.encode('utf-8'),
+                        random_str.encode('utf-8'),
+                        digestmod=hashlib.sha256
+                    ).digest()
+                else:
+                    raise Exception(f"invalid authentication scheme {auth_by_key}")
                 encoded_signature = base64.b64encode(signature).decode('ascii')
-                self.logger.info(f"password signature={encoded_signature}, random_str={random_str}")
+                self.app_log.info(f"password signature={encoded_signature}, random_str={random_str}")
                 message.setField(fix.Username(username))
                 message.setField(fix.RawData(random_str))
                 message.setField(fix.Password(encoded_signature))
             else:
-                self.logger.info(f"login with username={username}: using plain username/password authentication")
+                self.app_log.info(f"login with username={username}: using plain username/password authentication")
                 message.setField(fix.Username(username))
                 message.setField(fix.Password(password))
 
