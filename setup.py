@@ -15,4 +15,5 @@ setup(name='phx-fix-base',
                 'phx.fix.utils',
                 'phx.utils'],
       package_data={'': ['phx/fix/specs/FIX44.xml']},
+      include_package_data=True,
       )
