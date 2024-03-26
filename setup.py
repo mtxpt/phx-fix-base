@@ -14,4 +14,5 @@ setup(name='phx-fix-base',
                 'phx.fix.tracker',
                 'phx.fix.utils',
                 'phx.utils'],
+      package_data={'': ['phx/fix/specs/FIX44.xml']},
       )
