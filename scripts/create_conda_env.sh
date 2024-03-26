@@ -98,11 +98,6 @@ if ! "$CONDA_DIR/bin/conda" env list | grep "^$CONDA_ENV" 2>&1 >/dev/null; then
 
   echo -e "\033[1;34mCreate '$CONDA_ENV' environment...\033[0m"
 
-  if [[ -n "$ROOT_CERTIFICATE" ]]; then
-      echo "conda config for root certificate $ROOT_CERTIFICATE"
-      "$CONDA_DIR/bin/conda" config --set ssl_verify "$ROOT_CERTIFICATE"
-  fi
-
   "$CONDA_DIR/bin/conda" create --name "$CONDA_ENV" --yes python=3.11
 
 fi

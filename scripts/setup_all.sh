@@ -20,13 +20,6 @@ fi
 
 source "$ROOT/opt/conda/bin/activate" dev
 
-if [[ -n "$ROOT_CERTIFICATE" ]]; then
-  echo "pip config for root certificate $ROOT_CERTIFICATE"
-  pip3 config set global.cert "$ROOT_CERTIFICATE"
-else
-  echo "no root certificate configured in env variable ROOT_CERTIFICATE"
-fi
-
 pip3 install -r requirements.txt
 
 ARCH="$(uname -m)"
