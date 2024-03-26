@@ -142,7 +142,6 @@ class App(fix.Application, FixInterface):
                 self.app_log.info(f"login with username={username}: using plain username/password authentication")
                 message.setField(fix.Username(username))
                 message.setField(fix.Password(password))
-
             self.logger.info(f"[toAdmin] logon {session_id} with user and pwd")
         elif msg_type.getValue() == fix.MsgType_Logout:
             self.logger.debug(f"[toAdmin] {session_id} sending logout")
