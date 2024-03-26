@@ -63,7 +63,3 @@ if __name__ == "__main__":
     strategy.thread.join()
 
     print(f"Strategy completed")
-
-
-
-
