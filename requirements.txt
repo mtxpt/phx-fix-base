@@ -1,0 +1,26 @@
+numpy
+pandas
+scipy
+matplotlib
+jupyter
+tzlocal
+pytz
+requests
+aiohttp
+sortedcontainers
+more-itertools
+tabulate
+pyyaml
+tomli
+tomli-w
+netifaces-plus
+pytest
+deepdiff
+prometheus_client
+prometheus_summary
+faster-fifo
+eventkit
+
+# arch other than arm64 and Windows should be able to install quickfix without a patch
+quickfix; platform_machine != 'arm64' and sys_platform != 'win32'
+
