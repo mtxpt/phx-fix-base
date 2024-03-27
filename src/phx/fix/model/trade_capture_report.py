@@ -128,7 +128,7 @@ class TradeReport(object):
         return pd.DataFrame(data, columns=TradeReport.field_names(compact=compact))
 
 
-class TradeReports(Message):
+class TradeCaptureReport(Message):
 
     def __init__(self, reports: List[TradeReport]):
         self.reports = reports

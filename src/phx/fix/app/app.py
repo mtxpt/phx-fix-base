@@ -26,7 +26,7 @@ from phx.fix.model.order_book import OrderBookSnapshot, OrderBookUpdate
 from phx.fix.model.position_report import Position, PositionReport, PositionReports
 from phx.fix.model.security import Security, SecurityReport
 from phx.fix.model.trade import Trade, Trades
-from phx.fix.model.trade_report import TradeReport, TradeReportParty, TradeReportSide, TradeReports
+from phx.fix.model.trade_capture_report import TradeReport, TradeReportParty, TradeReportSide, TradeCaptureReport
 from phx.fix.utils import cxl_rej_response_to_to_string, cxl_rej_reason_to_string
 from phx.fix.utils import entry_type_to_str, msg_type_to_string
 from phx.fix.utils import fix_message_string, extract_message_field_value
@@ -185,7 +185,7 @@ class App(fix.Application, FixInterface):
         elif msg_type.getValue() == fix.MsgType_MarketDataIncrementalRefresh:
             self.on_market_data_refresh_incremental(message, sending_time)
         elif msg_type.getValue() == fix.MsgType_ExecutionReport:
-            self.on_execution_report(message, session_id, sending_time)
+            self.on_exec_report(message, session_id, sending_time)
         elif msg_type.getValue() == fix.MsgType_PositionReport:
             self.on_position_report(message, session_id, sending_time)
         elif msg_type.getValue() == fix.MsgType_OrderCancelReject:
@@ -429,7 +429,7 @@ class App(fix.Application, FixInterface):
         if trades:
             self.message_queue.put(Trades(trades), block=False)
 
-    def on_execution_report(self, message, session_id, sending_time):
+    def on_exec_report(self, message, session_id, sending_time):
         """
         parse execution report
             - https://www.onixs.biz/fix-dictionary/4.4/msgType_8_8.html
@@ -531,7 +531,7 @@ class App(fix.Application, FixInterface):
         if len(self.trade_reports) == tot_num_trade_reports:
             reports = self.trade_reports
             self.trade_reports = []
-            self.message_queue.put(TradeReports(reports), block=False)
+            self.message_queue.put(TradeCaptureReport(reports), block=False)
 
     def on_security_list(self, message, sending_time):
         """

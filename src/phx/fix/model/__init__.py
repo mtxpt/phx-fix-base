@@ -5,4 +5,4 @@ from .order_book import OrderBookUpdate, OrderBookSnapshot, TopOfBook
 from .position_report import Position, PositionReports
 from .security import Security, SecurityReport
 from .trade import Trade, Trades
-from .trade_report import TradeReport, TradeReports
+from .trade_capture_report import TradeReport, TradeCaptureReport
