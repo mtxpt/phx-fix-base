@@ -8,6 +8,7 @@ import random
 import ssl
 import string
 import time
+from math import trunc
 from datetime import datetime
 from logging import Logger
 from threading import Lock
@@ -1011,23 +1012,21 @@ class App(fix.Application, FixInterface):
     def get_username(self):
         return self.fix_settings.get(self.session_id).getString("Username")
 
+    def tick_round(self, price, min_tick_size=None):
+        if not min_tick_size or min_tick_size <= 0.0:
+            return round(price)
+        else:
+            rem = trunc((price % 1) / min_tick_size)
+            return trunc(price) + rem * min_tick_size
+
     def get_market_data_subscriptions(self):
-        self.lock.acquire()
-        res = copy.deepcopy(self.market_data_subscriptions)
-        self.lock.release()
-        return res
+        return copy.deepcopy(self.market_data_subscriptions)
 
     def get_position_subscriptions(self):
-        self.lock.acquire()
-        res = copy.deepcopy(self.position_subscriptions)
-        self.lock.release()
-        return res
+        return copy.deepcopy(self.position_subscriptions)
 
     def get_trade_report_subscriptions(self):
-        self.lock.acquire()
-        res = copy.deepcopy(self.trade_report_subscriptions)
-        self.lock.release()
-        return res
+        return copy.deepcopy(self.trade_report_subscriptions)
 
     def purge_fix_message_history(self):
         """

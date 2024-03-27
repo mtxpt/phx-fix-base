@@ -132,4 +132,3 @@ class TradeCaptureReport(Message):
 
     def __init__(self, reports: List[TradeReport]):
         self.reports = reports
-

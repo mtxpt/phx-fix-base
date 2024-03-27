@@ -1,10 +1,8 @@
 import abc
-from typing import Optional, List, Dict, Tuple, AnyStr
-from datetime import datetime
+from typing import List, Dict, Tuple, AnyStr
+
 import quickfix as fix
 
-from phx.fix.model.exec_report import ExecReport
-from phx.fix.model.security import Security
 from phx.fix.model.order import Order
 
 
@@ -28,16 +26,24 @@ class FixInterface(abc.ABC):
 
     @abc.abstractmethod
     def new_order_single(
-            self, exchange, symbol, side, order_qty, price=None,
+            self,
+            exchange,
+            symbol,
+            side,
+            order_qty,
+            price=None,
             ord_type=fix.OrdType_LIMIT,
             tif=fix.TimeInForce_GOOD_TILL_CANCEL,
-            account=None, min_qty=0, text="NewOrderSingle"
+            account=None,
+            min_qty=0,
+            text="NewOrderSingle"
     ) -> Tuple[Order, fix.Message]:
         pass
 
     @abc.abstractmethod
     def order_cancel_request(
-            self, order: Order
+            self,
+            order: Order
     ) -> Tuple[Order, fix.Message]:
         """
         Send order cancel request
@@ -48,8 +54,13 @@ class FixInterface(abc.ABC):
 
     @abc.abstractmethod
     def order_cancel_replace_request(
-            self, order, order_qty, price=None, ord_type=None,
-            exec_instr=None, account=None
+            self,
+            order,
+            order_qty,
+            price=None,
+            ord_type=None,
+            exec_instr=None,
+            account=None
     ) -> Tuple[Order, fix.Message]:
         """
         Send order cancel replace request
@@ -148,7 +159,12 @@ class FixInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def security_definition_request(self, exchange, symbol, req_id="req_id") -> fix.Message:
+    def security_definition_request(
+            self,
+            exchange,
+            symbol,
+            req_id="req_id"
+    ) -> fix.Message:
         """
         Send security definition request
         """
@@ -156,8 +172,11 @@ class FixInterface(abc.ABC):
 
     @abc.abstractmethod
     def market_data_request(
-            self, exchange_symbol_pairs, market_depth=0,
-            content="both", req_id=None,
+            self,
+            exchange_symbol_pairs,
+            market_depth=0,
+            content="both",
+            req_id=None,
             subscription_request_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
         """
@@ -185,4 +204,34 @@ class FixInterface(abc.ABC):
 
     @abc.abstractmethod
     def get_username(self):
+        pass
+
+    @abc.abstractmethod
+    def tick_round(
+            self,
+            price,
+            min_tick_size=None
+    ):
+        pass
+
+    @abc.abstractmethod
+    def purge_fix_message_history(self):
+        pass
+
+    @abc.abstractmethod
+    def get_fix_message_history(
+            self,
+            purge_history=False
+    ) -> Dict[str, List[str]]:
+        pass
+
+    @abc.abstractmethod
+    def save_fix_message_history(
+            self,
+            path=None,
+            fmt="csv",
+            pre=None,
+            post=None,
+            purge_history=False
+    ):
         pass
