@@ -26,8 +26,8 @@ dependencies = [
     "pandas",
     "scipy",
     "tzlocal",
-    "pytz"''
-    "requests"
+    "pytz",
+    "requests",
     "sortedcontainers",
     "more-itertools",
     "tabulate",
