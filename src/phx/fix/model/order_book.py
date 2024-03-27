@@ -70,7 +70,7 @@ class OrderBook:
         Improve: implement a proper C++ accelerated version via nanobind
     """
 
-    def __init__(self, exchange, symbol, bids=None, asks=None):
+    def __init__(self, exchange, symbol, bids=None, asks=None, exchange_ts=None, local_ts=None):
         self.exchange = exchange
         self.symbol = symbol
         bids = bids if bids is not None else SortedDict()
@@ -79,8 +79,8 @@ class OrderBook:
         self.asks = asks if isinstance(asks, SortedDict) else SortedDict(asks)
         self.cum_bids = None
         self.cum_asks = None
-        self.exchange_ts = None
-        self.local_ts = None
+        self.exchange_ts = exchange_ts
+        self.local_ts = local_ts
 
     def key(self) -> Tuple[str, str]:
         return self.exchange, self.symbol

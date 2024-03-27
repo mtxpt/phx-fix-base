@@ -86,22 +86,20 @@ class PositionReport(object):
             result.append(fields)
         return result
 
-    @staticmethod
-    def tabulate(reports: list, float_fmt=".2f", table_fmt="psql", compact=True):
-        if reports:
-            headers = PositionReport.field_names(compact)
-            data = []
-            for report in reports:
-                rows = report.field_str(compact)
-                for row in rows:
-                    data.append(row)
-            return tabulate(data, headers=headers, tablefmt=table_fmt, floatfmt=float_fmt)
-        else:
-            return None
-
 
 class PositionReports(Message):
 
     def __init__(self, reports: List[PositionReport]):
         self.reports = reports
 
+    def tabulate(self, float_fmt=".2f", table_fmt="psql", compact=True):
+        if self.reports:
+            headers = PositionReport.field_names(compact)
+            data = []
+            for report in self.reports:
+                rows = report.field_str(compact)
+                for row in rows:
+                    data.append(row)
+            return tabulate(data, headers=headers, tablefmt=table_fmt, floatfmt=float_fmt)
+        else:
+            return None

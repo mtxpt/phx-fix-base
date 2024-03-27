@@ -110,25 +110,23 @@ class TradeReport(object):
         ]
         return detailed_fields + compact_fields
 
-    @staticmethod
-    def tabulate(reports: list, float_fmt=".2f", table_fmt="psql", compact=True):
-        if reports:
+
+class TradeCaptureReport(Message):
+
+    def __init__(self, reports: List[TradeReport]):
+        self.reports = reports
+
+    def tabulate(self, float_fmt=".2f", table_fmt="psql", compact=True):
+        if self.reports:
             headers = TradeReport.field_names(compact)
             data = []
-            for report in reports:
+            for report in self.reports:
                 row = report.field_str(compact)
                 data.append(row)
             return tabulate(data, headers=headers, tablefmt=table_fmt, floatfmt=float_fmt)
         else:
             return None
 
-    @staticmethod
-    def to_df(reports: list, compact=False):
-        data = [rep.field_str(compact=compact) for rep in reports]
+    def to_df(self, compact=False):
+        data = [rep.field_str(compact=compact) for rep in self.reports]
         return pd.DataFrame(data, columns=TradeReport.field_names(compact=compact))
-
-
-class TradeCaptureReport(Message):
-
-    def __init__(self, reports: List[TradeReport]):
-        self.reports = reports
