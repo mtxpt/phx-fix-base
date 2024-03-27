@@ -19,7 +19,7 @@ class PositionTracker(object):
     POSITION_UPDATE_FIELDS: Final = ["exchange", "symbol", "account", "update_time", "position_quantity"]
     NO_EXCHANGE: Final = "FUNDS"
 
-    def __init__(self, name, netting: bool, app_log):
+    def __init__(self, name, netting: bool, logger):
         self.name = name
         self.netting = netting
 
@@ -31,7 +31,7 @@ class PositionTracker(object):
 
         self.snapshots_obtained = False
         self.last_update_time = None
-        self.app_log = app_log
+        self.logger = logger
 
     def purge_history(self):
         self.position_updates = []
@@ -84,7 +84,7 @@ class PositionTracker(object):
                                 qty = abs(total_quantity)
                                 side = fix.Side_SELL
                         else:
-                            self.app_log.error(
+                            self.logger.error(
                                 f"simultaneous long-short positions on the same exchange",
                                 f"{report.exchange}",
                                 f"{report.pos_req_id}",
@@ -105,15 +105,16 @@ class PositionTracker(object):
                         qty = pos.short_qty
                         side = fix.Side_SELL
                     else:
-                        self.app_log.error(f"invalid long or short position quantities"
-                                           f"{report.exchange}",
-                                           f"{report.pos_req_id}",
-                                           f"{report.pos_maint_rpt_id}",
-                                           f"{pos.account}",
-                                           f"{pos.symbol}",
-                                           f"{pos.long_qty}",
-                                           f"{pos.short_qty}"
-                                           )
+                        self.logger.error(
+                            f"invalid long or short position quantities"
+                            f"{report.exchange}",
+                            f"{report.pos_req_id}",
+                            f"{report.pos_maint_rpt_id}",
+                            f"{pos.account}",
+                            f"{pos.symbol}",
+                            f"{pos.long_qty}",
+                            f"{pos.short_qty}"
+                        )
                         continue
 
                     self.set_position(exchange, pos.symbol, pos.account, side, qty, transact_time)

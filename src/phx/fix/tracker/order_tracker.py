@@ -12,9 +12,9 @@ from phx.utils import dict_diff
 
 class OrderTrackerBase(object):
 
-    def __init__(self, name, app_log):
+    def __init__(self, name, logger):
         self.name = name
-        self.app_log = app_log
+        self.logger = logger
 
         # pending new orders by cl_ord_id assigned when submitting a new order
         # can be used by client app to monitor execution timeout
@@ -88,7 +88,7 @@ class OrderTrackerBase(object):
             elif order.cl_ord_id is not None:
                 self.pending_orders[order.cl_ord_id] = order
             else:
-                self.app_log.error(
+                self.logger.error(
                     f"error in {self.__class__.__name__}: order with both ord_id=None and cl_ord_id=None not allowed"
                 )
         else:
@@ -105,7 +105,7 @@ class OrderTrackerBase(object):
         historical = {}
         non_convertable, convertable = partition(lambda r: r.convertable_to_order(), reports)
         for report in convertable:
-            order = report.to_order(self.app_log.error)
+            order = report.to_order(self.logger.error)
             assert order is not None and order.cl_ord_id is not None
             if order.ord_id is None:
                 pending[order.cl_ord_id] = order
@@ -123,9 +123,9 @@ class OrderTrackerBase(object):
 
 class OrderTracker(OrderTrackerBase):
 
-    def __init__(self, name, app_log, position_tracker_calculated, print_reports=True):
-        OrderTrackerBase.__init__(self, name, app_log)
-        self.position_tracker_calculated = position_tracker_calculated
+    def __init__(self, name, logger, position_tracker, print_reports=True):
+        OrderTrackerBase.__init__(self, name, logger)
+        self.position_tracker = position_tracker
         self.print_reports = print_reports
 
     def process(self, message, report: ExecReport, sending_time) -> Union[
@@ -174,7 +174,7 @@ class OrderTracker(OrderTrackerBase):
                 )
 
         elif report.ord_status == fix.OrdStatus_REJECTED:
-            self.app_log.error(
+            self.logger.error(
                 f"{self.__class__.__name__}: OrdStatus_REJECTED {report.text} "
                 f"exchange {report.exchange} "
                 f"account {report.account} "
@@ -193,7 +193,7 @@ class OrderTracker(OrderTrackerBase):
                 order = self.open_orders[report.ord_id]
 
                 if order.cl_ord_id != report.cl_ord_id:
-                    self.app_log.error(
+                    self.logger.error(
                         f"{self.__class__.__name__}: error cl_ord_id differ {order.cl_ord_id} != {report.cl_ord_id}"
                     )
 
@@ -224,7 +224,7 @@ class OrderTracker(OrderTrackerBase):
             if pending:
                 del self.pending_orders[report.cl_ord_id]
 
-            order = report.to_order(self.app_log.error)
+            order = report.to_order(self.logger.error)
             self.open_orders[report.ord_id] = order
 
             if pending is None:
@@ -312,15 +312,15 @@ class OrderTracker(OrderTrackerBase):
                 report.last_qty = order.last_qty
 
                 # last_qty is calculated in order.update
-                self.position_tracker_calculated.add_position(
+                self.position_tracker.add_position(
                     report.exchange, report.symbol, report.account, report.side, order.last_qty, report.tx_time
                 )
 
                 if self.print_reports:
-                    table = self.position_tracker_calculated.tabulate(
+                    table = self.position_tracker.tabulate(
                         report.exchange, report.symbol, report.account
                     )
-                    self.app_log.info(f"<==== position_tracker_calculated.add_position\n{table}")
+                    self.logger.info(f"<==== position_tracker_calculated.add_position\n{table}")
 
             if order is None:
                 error = (
@@ -347,15 +347,15 @@ class OrderTracker(OrderTrackerBase):
                 del self.open_orders[report.ord_id]
 
                 # last_qty is calculated in order.update
-                self.position_tracker_calculated.add_position(
+                self.position_tracker.add_position(
                     report.exchange, report.symbol, report.account, report.side, order.last_qty, report.tx_time
                 )
 
                 if self.print_reports:
-                    table = self.position_tracker_calculated.tabulate(
+                    table = self.position_tracker.tabulate(
                         report.exchange, report.symbol, report.account
                     )
-                    self.app_log.info(f"<==== position_tracker_calculated.add_position\n{table}")
+                    self.logger.info(f"<==== position_tracker_calculated.add_position\n{table}")
 
             if order is None:
                 error = (
@@ -395,7 +395,7 @@ class OrderTracker(OrderTrackerBase):
             )
 
         if error is not None:
-            self.app_log.error(error)
+            self.logger.error(error)
 
         return order, len(self.open_orders), report, error
 
@@ -422,8 +422,8 @@ class StatusOrderTracker(OrderTrackerBase):
 
                 if report.ord_status == fix.OrdStatus_REJECTED:
                     ord_rej_reason = extract_message_field_value(fix.OrdRejReason(), message, "int")
-                    handler = self.app_log.info \
-                        if ord_rej_reason == fix.OrdRejReason_UNKNOWN_ORDER else self.app_log.error
+                    handler = self.logger.info \
+                        if ord_rej_reason == fix.OrdRejReason_UNKNOWN_ORDER else self.logger.error
                     handler(
                         f"on_execution_report - mass order status request rejected: {report.text} "
                         f"| {fix_message_string(message)}"
@@ -435,7 +435,7 @@ class StatusOrderTracker(OrderTrackerBase):
                     reports = self.exec_report_group
                     self.exec_report_group = []
                     if tot_num_reports != len(reports):
-                        self.app_log.error(
+                        self.logger.error(
                             f"on_execution_report : error mass status request "
                             f"completed with {len(reports)} "
                             f"expected number of reports {tot_num_reports}"
@@ -446,9 +446,9 @@ class StatusOrderTracker(OrderTrackerBase):
             else:
                 report.status_req_id = extract_message_field_value(fix.OrdStatusReqID(), message, "str")
                 if report.convertable_to_order():
-                    order = report.to_order(self.app_log.error)
+                    order = report.to_order(self.logger.error)
                     self.set_order_state(order)
                 return report
         else:
-            self.app_log.error(f"StatusOrderTracker : execution report must be of type 'I'")
+            self.logger.error(f"StatusOrderTracker : execution report must be of type 'I'")
             return []
