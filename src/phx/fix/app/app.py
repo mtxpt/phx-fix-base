@@ -43,12 +43,12 @@ class App(fix.Application, FixInterface):
     def __init__(
             self,
             message_queue: queue.Queue,
-            fix_settings: fix.SessionSettings,
+            session_settings: fix.SessionSettings,
             logger: Logger,
             export_dir: str,
     ):
         fix.Application.__init__(self)
-        self.fix_settings = fix_settings
+        self.session_settings = session_settings
         self.message_queue = message_queue
         self.logger = logger
         self.export_dir = export_dir
@@ -120,9 +120,9 @@ class App(fix.Application, FixInterface):
             message.getHeader().getField(msg_type)
 
             if msg_type.getValue() == fix.MsgType_Logon:
-                username = self.fix_settings.get(session_id).getString("Username")
-                password = self.fix_settings.get(session_id).getString("Password")
-                auth_by_key = self.fix_settings.get(session_id).getString("AuthenticateByKey")
+                username = self.session_settings.get(session_id).getString("Username")
+                password = self.session_settings.get(session_id).getString("Password")
+                auth_by_key = self.session_settings.get(session_id).getString("AuthenticateByKey")
                 if auth_by_key in ["Latest", "Y"]:
                     self.logger.info(f"login with username={username}: using key based authentication scheme with hmac")
                     random_str = App.get_random_string(8)
@@ -1031,10 +1031,10 @@ class App(fix.Application, FixInterface):
         return message
 
     def get_account(self):
-        return self.fix_settings.get(self.session_id).getString("Account")
+        return self.session_settings.get(self.session_id).getString("Account")
 
     def get_username(self):
-        return self.fix_settings.get(self.session_id).getString("Username")
+        return self.session_settings.get(self.session_id).getString("Username")
 
     def tick_round(self, price, min_tick_size=None):
         if not min_tick_size or min_tick_size <= 0.0:

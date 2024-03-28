@@ -1,8 +1,8 @@
-from typing import Optional, List
-
+from typing import Optional, List, Callable
+from pathlib import Path
 import quickfix as fix
 
-from phx.utils import make_dirs
+from phx.utils import make_dirs, make_dirs_for_file
 from phx.utils.path_base import PathBase
 from phx.fix.utils import dict_to_fix_dict, fix_session_default_config, fix_session_config
 
@@ -64,6 +64,33 @@ def settings_to_string(settings: fix.SessionSettings, session_id, pre) -> str:
     rows.append("AuthenticateByKey="+d.getString("AuthenticateByKey"))
 
     return default_settings_to_string(settings, pre) + "\n" + "\n".join([pre + r for r in rows])
+
+
+def create_session_settings(self, filename: str, data_sub_dir: str = None, settings_mapper: Optional[Callable] = None):
+    with open(filename) as f:
+        content = f.readlines()
+        mod_content = settings_mapper(content) if settings_mapper is not None else content
+        self.sender_comp_id = get_settings_content("SenderCompID", mod_content)
+        target_comp_id = get_settings_content("TargetCompID", mod_content)
+        begin_string = get_settings_content("BeginString", mod_content)
+        self.session_id = fix.SessionID(begin_string, self.sender_comp_id, target_comp_id)
+        if data_sub_dir is None:
+            self.data_dir = self.temp / self.sender_comp_id
+        else:
+            self.data_dir = self.temp / data_sub_dir / self.sender_comp_id
+        self.log_dir = self.data_dir / "logs"
+        self.session_dir = self.data_dir / "sessions"
+        self.export_dir = self.data_dir / "exports"
+        make_dirs(self.log_dir)
+        make_dirs(self.session_dir)
+        make_dirs(self.export_dir)
+        set_settings_content(mod_content, "DataDictionary", self.root / "phx/fix/specs/FIX44.xml")
+        set_settings_content(mod_content, "FileLogPath", self.log_dir)
+        set_settings_content(mod_content, "FileStorePath", self.session_dir)
+        fix_settings_file = str(self.data_dir / Path(filename).name)
+        with open(make_dirs_for_file(fix_settings_file), "w") as new_file:
+            new_file.writelines(mod_content)
+        return fix.SessionSettings(fix_settings_file)
 
 
 class FixSessionConfig(PathBase):
