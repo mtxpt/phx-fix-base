@@ -145,16 +145,19 @@ class FixSessionConfig(PathBase):
         fix_session_cfg = dict_to_fix_dict(session_cfg)
         self.settings.set(self.session_id, fix_session_cfg)
 
-    def get_fix_session_settings(self):
+    def get_session_id(self) -> fix.SessionID:
+        return self.session_id
+
+    def get_fix_session_settings(self) -> fix.SessionSettings:
         return self.settings
 
-    def get_string(self, key):
+    def get_string(self, key) -> str:
         return self.settings.get().getString(key)
 
     def set_string(self, key, value):
         return self.settings.get().setString(key, value)
 
-    def to_str(self, pre=""):
+    def to_str(self, pre="") -> str:
         return settings_to_string(self.settings, self.session_id, pre)
 
     def __str__(self):

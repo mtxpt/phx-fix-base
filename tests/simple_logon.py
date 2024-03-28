@@ -3,7 +3,7 @@ import threading
 import quickfix as fix
 from typing import Callable
 
-from phx.fix.app import App, FixSessionConfig
+from phx.fix.app import App, AppRunner, FixSessionConfig
 from phx.fix.model import Logon, Create
 from phx.utils import PathBase, setup_logger
 
@@ -48,17 +48,14 @@ if __name__ == "__main__":
         socket_connect_port="1238",
         socket_connect_host="127.0.0.1",
     )
-    fix_settings = fix_configs.get_fix_session_settings()
+    fix_session_settings = fix_configs.get_fix_session_settings()
 
-    fix_app = App(message_queue, fix_settings, logger, temp_dir)
-    store_factory = fix.FileStoreFactory(fix_settings)
-    log_factory = fix.FileLogFactory(fix_settings)
-    initiator = fix.SocketInitiator(fix_app, store_factory, fix_settings, log_factory)
+    app = App(message_queue, fix_session_settings, logger, temp_dir)
+    app_runner = AppRunner(app, fix_session_settings, fix_configs.get_session_id(), logger)
+    strategy = Strategy(message_queue, lambda: app_runner.stop())
 
-    strategy = Strategy(message_queue, lambda: initiator.stop())
-
+    app_runner.start()
     strategy.start()
-    initiator.start()
 
     strategy.thread.join()
 
