@@ -6,7 +6,7 @@ from more_itertools import partition
 
 from phx.fix.model.exec_report import ExecReport
 from phx.fix.model.order import Order
-from phx.fix.utils import extract_message_field_value, fix_message_string, order_status_to_string
+from phx.fix.utils import order_status_to_string
 from phx.utils import dict_diff
 
 
@@ -36,7 +36,7 @@ class OrderTrackerBase(object):
         self.snapshots_obtained = False
 
     @abc.abstractmethod
-    def process(self, message, report: ExecReport, sending_time) -> Union[
+    def process(self, report: ExecReport, sending_time) -> Union[
         Tuple[Optional[Order], int, ExecReport, Optional[str]], Union[ExecReport, List[ExecReport]]
     ]:
         pass
@@ -134,12 +134,7 @@ class OrderTracker(OrderTrackerBase):
         self.position_tracker = position_tracker
         self.print_reports = print_reports
 
-    def process(
-            self,
-            message,
-            report: ExecReport,
-            sending_time
-    ) -> Tuple[Optional[Order], Optional[str]]:
+    def process(self, report: ExecReport, sending_time) -> Tuple[Optional[Order], Optional[str]]:
         order = None
         error = None
 
@@ -154,8 +149,7 @@ class OrderTracker(OrderTrackerBase):
                 f"{self.__class__.__name__}: ExecType_REJECTED {report.text} "
                 f"exchange {report.exchange} "
                 f"account {report.account} "
-                f"symbol {report.symbol} "
-                f"| {fix_message_string(message)}"
+                f"symbol {report.symbol}"
             )
 
         # this is an order cancel replace
@@ -188,8 +182,7 @@ class OrderTracker(OrderTrackerBase):
                 f"exchange {report.exchange} "
                 f"account {report.account} "
                 f"cl_ord_id {report.cl_ord_id} "
-                f"ord_id {report.ord_id} | "
-                f"{fix_message_string(message)} "
+                f"ord_id {report.ord_id}"
             )
 
             if report.cl_ord_id in self.pending_orders:
@@ -280,8 +273,7 @@ class OrderTracker(OrderTrackerBase):
                     f"OrdStatus_PENDING_CANCEL | OrdStatus_PENDING_REPLACE | OrdStatus_PENDING_CANCEL_REPLACE "
                     f"{report.ord_id} not found in open orders! "
                     f"num open orders {len(self.open_orders)} "
-                    f"order status {order_status_to_string(report.ord_status)} "
-                    f"| {fix_message_string(message)}"
+                    f"order status {order_status_to_string(report.ord_status)}"
                 )
 
         elif report.ord_status == fix.OrdStatus_CANCELED:
@@ -407,4 +399,3 @@ class OrderTracker(OrderTrackerBase):
             self.logger.error(error)
 
         return order, error
-
