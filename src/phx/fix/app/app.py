@@ -79,8 +79,6 @@ class App(fix.Application, FixInterface):
         self.trade_reports = []
         self.position_reports = []
 
-        # multi-threading - some values may be changed from other threads - use lock
-        self.lock = Lock()
 
     def onCreate(self, session_id):
         try:
@@ -696,10 +694,7 @@ class App(fix.Application, FixInterface):
             exchange, symbol, account, cl_ord_id, side, ord_type, order_qty, price,
             fix.OrdStatus_PENDING_NEW, min_qty, tif, ord_id=None, text=text
         )
-        self.lock.acquire()
-        self.order_tracker_local.pending_orders[cl_ord_id] = order
-        self.lock.release()
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return order, message
 
     def order_cancel_request(self, order: Order) -> Tuple[Order, fix.Message]:
@@ -741,7 +736,6 @@ class App(fix.Application, FixInterface):
 
         Side cannot be changed (however, some side modifications are allowed by FIX standard)
         """
-        self.lock.acquire()
         message = fix.Message()
         header = message.getHeader()
         header.setField(fix.MsgType(fix.MsgType_OrderCancelReplaceRequest))
@@ -1068,7 +1062,6 @@ class App(fix.Application, FixInterface):
         self.sent_admin_message_history = []
 
     def get_fix_message_history(self, purge_history=False) -> Dict[str, List[str]]:
-        self.lock.acquire()
         history = {
             "received_app_message_history": self.received_app_message_history.copy(),
             "received_admin_message_history": self.received_admin_message_history.copy(),
@@ -1080,7 +1073,6 @@ class App(fix.Application, FixInterface):
             self.received_admin_message_history = []
             self.sent_app_message_history = []
             self.sent_admin_message_history = []
-        self.lock.release()
         return history
 
     def save_fix_message_history(self, path=None, fmt="csv", pre=None, post=None, purge_history=False):
