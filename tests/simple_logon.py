@@ -1,6 +1,5 @@
 import queue
 import threading
-import quickfix as fix
 from typing import Callable
 
 from phx.fix.app import App, AppRunner, FixSessionConfig
