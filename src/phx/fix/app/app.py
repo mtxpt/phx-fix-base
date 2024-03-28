@@ -79,24 +79,31 @@ class App(fix.Application, FixInterface):
         self.trade_reports = []
         self.position_reports = []
 
-        # multi-threading - some values may be changed from other threads - use lock
-        self.lock = Lock()
 
     def onCreate(self, session_id):
-        self.logger.info(f"onCreate : Session {session_id.toString()}")
-        self.sessions.add(session_id)
-        self.session_id = session_id
-        self.message_queue.put(Create(session_id), block=False)
+        try:
+            self.logger.info(f"onCreate : Session {session_id.toString()}")
+            self.sessions.add(session_id)
+            self.session_id = session_id
+            self.message_queue.put(Create(session_id), block=False)
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
 
     def onLogon(self, session_id):
-        self.logger.info(f"onLogon: session {session_id.toString()} logged in")
-        self.connected = True
-        self.message_queue.put(Logon(session_id), block=False)
+        try:
+            self.logger.info(f"onLogon: session {session_id.toString()} logged in")
+            self.connected = True
+            self.message_queue.put(Logon(session_id), block=False)
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
 
     def onLogout(self, session_id):
-        self.logger.info(f"onLogout: session {session_id.toString()} logged out")
-        self.connected = False
-        self.message_queue.put(Logout(session_id), block=False)
+        try:
+            self.logger.info(f"onLogout: session {session_id.toString()} logged out")
+            self.connected = False
+            self.message_queue.put(Logout(session_id), block=False)
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
 
     @staticmethod
     def get_random_string(length):
@@ -105,113 +112,133 @@ class App(fix.Application, FixInterface):
         return result_str
 
     def toAdmin(self, message, session_id):
-        msg = fix_message_string(message)
-        self.sent_admin_message_history.append(msg)
+        try:
+            msg = fix_message_string(message)
+            self.sent_admin_message_history.append(msg)
 
-        msg_type = fix.MsgType()
-        message.getHeader().getField(msg_type)
+            msg_type = fix.MsgType()
+            message.getHeader().getField(msg_type)
 
-        if msg_type.getValue() == fix.MsgType_Logon:
-            username = self.fix_settings.get(session_id).getString("Username")
-            password = self.fix_settings.get(session_id).getString("Password")
-            auth_by_key = self.fix_settings.get(session_id).getString("AuthenticateByKey")
-            if auth_by_key in ["Latest", "Y"]:
-                self.app_log.info(f"login with username={username}: using key based authentication scheme with hmac")
-                random_str = App.get_random_string(8)
-                secret_key = password
-                if auth_by_key == "Y":
-                    signature = hmac.new(
-                        bytes(secret_key, "utf-8"),
-                        bytes(random_str, "utf-8"),
-                        digestmod=hashlib.sha256
-                    ).digest()
-                elif auth_by_key == "Latest":
-                    random_str = str(round(time.time() * 1000)) + '.' + str(ssl.RAND_bytes(64))
-                    signature = hmac.new(
-                        secret_key.encode('utf-8'),
-                        random_str.encode('utf-8'),
-                        digestmod=hashlib.sha256
-                    ).digest()
+            if msg_type.getValue() == fix.MsgType_Logon:
+                username = self.fix_settings.get(session_id).getString("Username")
+                password = self.fix_settings.get(session_id).getString("Password")
+                auth_by_key = self.fix_settings.get(session_id).getString("AuthenticateByKey")
+                if auth_by_key in ["Latest", "Y"]:
+                    self.logger.info(f"login with username={username}: using key based authentication scheme with hmac")
+                    random_str = App.get_random_string(8)
+                    secret_key = password
+                    if auth_by_key == "Y":
+                        signature = hmac.new(
+                            bytes(secret_key, "utf-8"),
+                            bytes(random_str, "utf-8"),
+                            digestmod=hashlib.sha256
+                        ).digest()
+                    elif auth_by_key == "Latest":
+                        random_str = str(round(time.time() * 1000)) + '.' + str(ssl.RAND_bytes(64))
+                        signature = hmac.new(
+                            secret_key.encode('utf-8'),
+                            random_str.encode('utf-8'),
+                            digestmod=hashlib.sha256
+                        ).digest()
+                    else:
+                        raise Exception(f"invalid authentication scheme {auth_by_key}")
+                    encoded_signature = base64.b64encode(signature).decode('ascii')
+                    self.logger.info(f"password signature={encoded_signature}, random_str={random_str}")
+                    message.setField(fix.Username(username))
+                    message.setField(fix.RawData(random_str))
+                    message.setField(fix.Password(encoded_signature))
                 else:
-                    raise Exception(f"invalid authentication scheme {auth_by_key}")
-                encoded_signature = base64.b64encode(signature).decode('ascii')
-                self.app_log.info(f"password signature={encoded_signature}, random_str={random_str}")
-                message.setField(fix.Username(username))
-                message.setField(fix.RawData(random_str))
-                message.setField(fix.Password(encoded_signature))
+                    self.logger.info(f"login with username={username}: using plain username/password authentication")
+                    message.setField(fix.Username(username))
+                    message.setField(fix.Password(password))
+                self.logger.info(f"[toAdmin] logon {session_id} with user and pwd")
+            elif msg_type.getValue() == fix.MsgType_Logout:
+                self.logger.debug(f"[toAdmin] {session_id} sending logout")
+            elif msg_type.getValue() == fix.MsgType_Heartbeat:
+                self.on_heart_beat(message, session_id)
+            elif msg_type.getValue() == fix.MsgType_Reject:
+                self.on_reject(message, session_id)
             else:
-                self.app_log.info(f"login with username={username}: using plain username/password authentication")
-                message.setField(fix.Username(username))
-                message.setField(fix.Password(password))
-            self.logger.info(f"[toAdmin] logon {session_id} with user and pwd")
-        elif msg_type.getValue() == fix.MsgType_Logout:
-            self.logger.debug(f"[toAdmin] {session_id} sending logout")
-        elif msg_type.getValue() == fix.MsgType_Heartbeat:
-            self.on_heart_beat(message, session_id)
-        elif msg_type.getValue() == fix.MsgType_Reject:
-            self.on_reject(message, session_id)
-        else:
-            self.logger.error(f"[toAdmin] {session_id} unhandled message | {msg}")
+                self.logger.error(f"[toAdmin] {session_id} unhandled message | {msg}")
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
 
     def fromAdmin(self, message, session_id):
-        msg = fix_message_string(message)
-        self.received_admin_message_history.append(msg)  # we cannot store a fix message for later usage - get seg fault
-        self.logger.debug(f"[fromAdmin] {session_id} | {msg}")
+        try:
+            msg = fix_message_string(message)
+            self.received_admin_message_history.append(
+                msg)  # we cannot store a fix message for later usage - get seg fault
+            self.logger.debug(f"[fromAdmin] {session_id} | {msg}")
 
-        msg_type = fix.MsgType()
-        message.getHeader().getField(msg_type)
+            msg_type = fix.MsgType()
+            message.getHeader().getField(msg_type)
 
-        if msg_type.getValue() == fix.MsgType_Logon:
-            pass
-        elif msg_type.getValue() == fix.MsgType_Logout:
-            pass
-        elif msg_type.getValue() == fix.MsgType_Heartbeat:
-            pass
+            if msg_type.getValue() == fix.MsgType_Logon:
+                pass
+            elif msg_type.getValue() == fix.MsgType_Logout:
+                pass
+            elif msg_type.getValue() == fix.MsgType_Heartbeat:
+                pass
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
 
     def toApp(self, message, session_id):
-        msg = fix_message_string(message)
-        self.sent_app_message_history.append(msg)
-        self.logger.debug(f"[toApp] {session_id} | {msg}")
+        try:
+            msg = fix_message_string(message)
+            self.sent_app_message_history.append(msg)
+            self.logger.debug(f"[toApp] {session_id} | {msg}")
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
 
     def fromApp(self, message, session_id):
-        msg = fix_message_string(message)
-        self.received_app_message_history.append(msg)
-        msg_type = fix.MsgType()
-        message.getHeader().getField(msg_type)
+        try:
+            msg = fix_message_string(message)
+            self.received_app_message_history.append(msg)
+            msg_type = fix.MsgType()
+            message.getHeader().getField(msg_type)
 
-        sending_time = extract_message_field_value(fix.SendingTime(), message, 'datetime')
+            sending_time = extract_message_field_value(fix.SendingTime(), message, 'datetime')
 
-        if msg_type.getValue() == fix.MsgType_MarketDataSnapshotFullRefresh:
-            self.on_market_data_refresh_full(message, sending_time)
-        elif msg_type.getValue() == fix.MsgType_MarketDataIncrementalRefresh:
-            self.on_market_data_refresh_incremental(message, sending_time)
-        elif msg_type.getValue() == fix.MsgType_ExecutionReport:
-            self.on_exec_report(message, session_id, sending_time)
-        elif msg_type.getValue() == fix.MsgType_PositionReport:
-            self.on_position_report(message, session_id, sending_time)
-        elif msg_type.getValue() == fix.MsgType_OrderCancelReject:
-            self.on_order_cancel_reject(message, session_id, sending_time)
-        elif msg_type.getValue() == fix.MsgType_MarketDataRequestReject:
-            self.on_market_data_request_reject(message, session_id, sending_time)
-        elif msg_type.getValue() == fix.MsgType_SecurityList:
-            self.on_security_list(message, sending_time)
-        elif msg_type.getValue() == fix.MsgType_SecurityDefinition:
-            self.on_security_definition(message, sending_time)
-        elif msg_type.getValue() == fix.MsgType_BusinessMessageReject:
-            self.on_business_message_reject(message, sending_time)
-        elif msg_type.getValue() == fix.MsgType_OrderMassCancelReport:
-            self.on_order_mass_cancel_report(message, sending_time)
-        elif msg_type.getValue() == fix.MsgType_RequestForPositionsAck:
-            self.on_request_for_position_ack(message, session_id, sending_time)
-        elif msg_type.getValue() == fix.MsgType_TradeCaptureReportRequestAck:
-            self.on_trade_capture_report_request_ack(message, session_id, sending_time)
-        elif msg_type.getValue() == fix.MsgType_TradeCaptureReport:
-            self.on_trade_capture_report(message, session_id, sending_time)
-        else:
-            self.logger.error(
-                f"[fromApp] {session_id} unhandled message "
-                f"| {fix_message_string(message)}"
-            )
+            if msg_type.getValue() == fix.MsgType_MarketDataSnapshotFullRefresh:
+                self.on_market_data_refresh_full(message, sending_time)
+            elif msg_type.getValue() == fix.MsgType_MarketDataIncrementalRefresh:
+                self.on_market_data_refresh_incremental(message, sending_time)
+            elif msg_type.getValue() == fix.MsgType_ExecutionReport:
+                self.on_exec_report(message, session_id, sending_time)
+            elif msg_type.getValue() == fix.MsgType_PositionReport:
+                self.on_position_report(message, session_id, sending_time)
+            elif msg_type.getValue() == fix.MsgType_OrderCancelReject:
+                self.on_order_cancel_reject(message, session_id, sending_time)
+            elif msg_type.getValue() == fix.MsgType_MarketDataRequestReject:
+                self.on_market_data_request_reject(message, session_id, sending_time)
+            elif msg_type.getValue() == fix.MsgType_SecurityList:
+                self.on_security_list(message, sending_time)
+            elif msg_type.getValue() == fix.MsgType_SecurityDefinition:
+                self.on_security_definition(message, sending_time)
+            elif msg_type.getValue() == fix.MsgType_BusinessMessageReject:
+                self.on_business_message_reject(message, sending_time)
+            elif msg_type.getValue() == fix.MsgType_OrderMassCancelReport:
+                self.on_order_mass_cancel_report(message, sending_time)
+            elif msg_type.getValue() == fix.MsgType_RequestForPositionsAck:
+                self.on_request_for_position_ack(message, session_id, sending_time)
+            elif msg_type.getValue() == fix.MsgType_TradeCaptureReportRequestAck:
+                self.on_trade_capture_report_request_ack(message, session_id, sending_time)
+            elif msg_type.getValue() == fix.MsgType_TradeCaptureReport:
+                self.on_trade_capture_report(message, session_id, sending_time)
+            else:
+                self.logger.error(
+                    f"[fromApp] {session_id} unhandled message "
+                    f"| {fix_message_string(message)}"
+                )
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
+
+    def send_message_to_session(self, message: fix.Message):
+        try:
+            self.logger.info(f'session_id {self.session_id} : send quick fix message {message.toString()}')
+            fix.Session.sendToTarget(message, self._session_id)
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
 
     def on_request_for_position_ack(self, message, session_id, sending_time):
         """
@@ -667,10 +694,7 @@ class App(fix.Application, FixInterface):
             exchange, symbol, account, cl_ord_id, side, ord_type, order_qty, price,
             fix.OrdStatus_PENDING_NEW, min_qty, tif, ord_id=None, text=text
         )
-        self.lock.acquire()
-        self.order_tracker_local.pending_orders[cl_ord_id] = order
-        self.lock.release()
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return order, message
 
     def order_cancel_request(self, order: Order) -> Tuple[Order, fix.Message]:
@@ -698,7 +722,7 @@ class App(fix.Application, FixInterface):
 
         order.ord_status = fix.OrdStatus_PENDING_CANCEL  # do not update order.cl_ord_id yet as may be rejected
 
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return order, message
 
     def order_cancel_replace_request(
@@ -712,7 +736,6 @@ class App(fix.Application, FixInterface):
 
         Side cannot be changed (however, some side modifications are allowed by FIX standard)
         """
-        self.lock.acquire()
         message = fix.Message()
         header = message.getHeader()
         header.setField(fix.MsgType(fix.MsgType_OrderCancelReplaceRequest))
@@ -742,7 +765,7 @@ class App(fix.Application, FixInterface):
 
         order.ord_status = fix.OrdStatus_PENDING_CANCEL_REPLACE  # do not update order.cl_ord_id yet as may be rejected
 
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
 
         return order, message
 
@@ -783,7 +806,7 @@ class App(fix.Application, FixInterface):
         tx_time = fix.TransactTime()
         tx_time.setString(datetime.utcnow().strftime("%Y%m%d-%H:%M:%S.%f")[:-3])
         message.setField(tx_time)
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def order_status_request(
@@ -811,7 +834,7 @@ class App(fix.Application, FixInterface):
             message.setField(fix.OrderID(order_id))
         if account is not None:
             message.setField(fix.Account(account))
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def order_mass_status_request(
@@ -838,7 +861,7 @@ class App(fix.Application, FixInterface):
             message.setField(fix.Account(account))
         message.setField(fix.MassStatusReqID(mass_status_req_id))
         message.setField(fix.MassStatusReqType(mass_status_req_type))
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def request_for_positions(
@@ -881,7 +904,7 @@ class App(fix.Application, FixInterface):
         cl_business_date = fix.ClearingBusinessDate()
         cl_business_date.setString(datetime.utcnow().strftime("%Y%m%d"))
         message.setField(cl_business_date)
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def trade_capture_report_request(
@@ -914,7 +937,7 @@ class App(fix.Application, FixInterface):
 
         self.trade_report_subscriptions[(trade_req_id, subscription_type)] = (datetime.utcnow(), [(exchange, symbol)])
 
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def security_list_request(self, req_id="req_id") -> fix.Message:
@@ -930,7 +953,7 @@ class App(fix.Application, FixInterface):
         message.setField(fix.SubscriptionRequestType(fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES))
         message.setField(fix.SecurityReqID(f"{req_id}_{self.next_request_id()}"))
         message.setField(fix.SecurityListRequestType(fix.SecurityListRequestType_ALL_SECURITIES))
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def security_definition_request(self, exchange, symbol, req_id="req_id") -> fix.Message:
@@ -947,7 +970,7 @@ class App(fix.Application, FixInterface):
         message.setField(fix.SecurityRequestType(fix.SecurityRequestType_REQUEST_LIST_SECURITIES))
         message.setField(fix.Symbol(symbol))
         message.setField(fix.SecurityExchange(exchange))
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def market_data_request(
@@ -1004,7 +1027,7 @@ class App(fix.Application, FixInterface):
             group.setField(fix.SecurityExchange(exchange))
             message.addGroup(group)
 
-        fix.Session.sendToTarget(message, self.session_id)
+        self.send_message_to_session(message)
         return message
 
     def get_account(self):
@@ -1039,7 +1062,6 @@ class App(fix.Application, FixInterface):
         self.sent_admin_message_history = []
 
     def get_fix_message_history(self, purge_history=False) -> Dict[str, List[str]]:
-        self.lock.acquire()
         history = {
             "received_app_message_history": self.received_app_message_history.copy(),
             "received_admin_message_history": self.received_admin_message_history.copy(),
@@ -1051,7 +1073,6 @@ class App(fix.Application, FixInterface):
             self.received_admin_message_history = []
             self.sent_app_message_history = []
             self.sent_admin_message_history = []
-        self.lock.release()
         return history
 
     def save_fix_message_history(self, path=None, fmt="csv", pre=None, post=None, purge_history=False):
