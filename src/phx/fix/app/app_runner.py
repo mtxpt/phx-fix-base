@@ -34,11 +34,11 @@ class AppRunner(object):
             self.initiator = fix.SocketInitiator(self.app, self.store_factory, self.session_settings, self.log_factory)
             self.initiator.start()
         except Exception as e:
-            self.logger.error(f"connect: exception {e}")
+            self.logger.error(f"AppRunner.start: exception {e}")
 
     def stop(self):
         try:
             if self.initiator is not None:
                 self.initiator.stop()
         except Exception as e:
-            self.logger.error(f"connect: exception {e}")
+            self.logger.error(f"AppRunner.stop: exception {e}")
