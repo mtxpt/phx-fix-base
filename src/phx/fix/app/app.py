@@ -585,6 +585,7 @@ class App(fix.Application, FixInterface):
 
     def on_security_definition(self, message: fix.Message, sending_time):
         self.logger.debug(f"on_security_definition {fix_message_string(message)}")
+        # TODO
 
     def on_market_data_request_reject(self, message: fix.Message, session_id, sending_time):
         text = extract_message_field_value(fix.Text(), message, "str")

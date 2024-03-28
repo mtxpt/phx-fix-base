@@ -123,14 +123,23 @@ class OrderTrackerBase(object):
 
 class OrderTracker(OrderTrackerBase):
 
-    def __init__(self, name, logger, position_tracker, print_reports=True):
+    def __init__(
+            self,
+            name,
+            logger,
+            position_tracker,
+            print_reports=True
+    ):
         OrderTrackerBase.__init__(self, name, logger)
         self.position_tracker = position_tracker
         self.print_reports = print_reports
 
-    def process(self, message, report: ExecReport, sending_time) -> Union[
-        Tuple[Optional[Order], int, ExecReport, Optional[str]], Union[ExecReport, List[ExecReport]]
-    ]:
+    def process(
+            self,
+            message,
+            report: ExecReport,
+            sending_time
+    ) -> Tuple[Optional[Order], Optional[str]]:
         order = None
         error = None
 
@@ -397,58 +406,5 @@ class OrderTracker(OrderTrackerBase):
         if error is not None:
             self.logger.error(error)
 
-        return order, len(self.open_orders), report, error
+        return order, error
 
-
-class StatusOrderTracker(OrderTrackerBase):
-
-    def __init__(self, name, app_log):
-        OrderTrackerBase.__init__(self, name, app_log)
-
-        # execution reports as returned by a mass order status request, used to accumulate the reports to completion
-        self.exec_report_group: List[ExecReport] = []
-
-    def process(self, message, report: ExecReport, sending_time) -> Union[
-        Tuple[Optional[Order], int, ExecReport, Optional[str]], Union[ExecReport, List[ExecReport]]
-    ]:
-        # if the execution report is a response to an OrderStatusRequest or MassOrderStatusRequest
-        if report.exec_type == "I":
-            is_mass_status = message.isSetField(fix.MassStatusReqID().getField())
-            if is_mass_status:
-                report.status_req_id = extract_message_field_value(fix.MassStatusReqID(), message, "str")
-                self.exec_report_group.append(report)
-                tot_num_reports = extract_message_field_value(fix.TotNumReports(), message, "int")
-                last_rpt_requested = extract_message_field_value(fix.LastRptRequested(), message, "bool")
-
-                if report.ord_status == fix.OrdStatus_REJECTED:
-                    ord_rej_reason = extract_message_field_value(fix.OrdRejReason(), message, "int")
-                    handler = self.logger.info \
-                        if ord_rej_reason == fix.OrdRejReason_UNKNOWN_ORDER else self.logger.error
-                    handler(
-                        f"on_execution_report - mass order status request rejected: {report.text} "
-                        f"| {fix_message_string(message)}"
-                    )
-                    self.exec_report_group = []
-                    return []
-
-                if last_rpt_requested:
-                    reports = self.exec_report_group
-                    self.exec_report_group = []
-                    if tot_num_reports != len(reports):
-                        self.logger.error(
-                            f"on_execution_report : error mass status request "
-                            f"completed with {len(reports)} "
-                            f"expected number of reports {tot_num_reports}"
-                        )
-
-                    self.set_snapshots(reports, sending_time, True)
-                    return reports
-            else:
-                report.status_req_id = extract_message_field_value(fix.OrdStatusReqID(), message, "str")
-                if report.convertable_to_order():
-                    order = report.to_order(self.logger.error)
-                    self.set_order_state(order)
-                return report
-        else:
-            self.logger.error(f"StatusOrderTracker : execution report must be of type 'I'")
-            return []

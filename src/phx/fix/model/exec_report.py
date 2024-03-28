@@ -12,9 +12,34 @@ from phx.utils import str_to_datetime
 
 
 class ExecReport(Message):
-    def __init__(self, exchange, symbol, account, tx_time, exec_id, exec_type, cl_ord_id, ord_id, side,
-                 price, avg_px, last_px, ord_type, ord_status, order_qty, min_qty, cum_qty, leaves_qty,
-                 last_qty, tif=None, status_req_id=None, text=""):
+    def __init__(
+            self,
+            exchange,
+            symbol,
+            account,
+            tx_time,
+            exec_id,
+            exec_type,
+            cl_ord_id,
+            ord_id,
+            side,
+            price,
+            avg_px,
+            last_px,
+            ord_type,
+            ord_status,
+            order_qty,
+            min_qty,
+            cum_qty,
+            leaves_qty,
+            last_qty,
+            tif=None,
+            status_req_id=None,
+            text="",
+            is_mass_status=None,
+            tot_num_reports=None,
+            last_rpt_requested=None
+    ):
         self.exchange = exchange
         self.symbol = symbol
         self.account = account
@@ -34,9 +59,12 @@ class ExecReport(Message):
         self.cum_qty = cum_qty
         self.leaves_qty = leaves_qty
         self.last_qty = last_qty
-        self.text = text
         self.tif = tif
         self.status_req_id = status_req_id
+        self.text = text
+        self.is_mass_status = is_mass_status
+        self.tot_num_reports = tot_num_reports
+        self.last_rpt_requested = last_rpt_requested
 
     @classmethod
     def from_message(cls, message):
@@ -80,10 +108,46 @@ class ExecReport(Message):
         tx_time = extract_message_field_value(fix.StringField(60), message, "str")  # bug in QuickFix
         tx_time = str_to_datetime(tx_time)
         text = extract_message_field_value(fix.Text(), message, "str")
+
+        is_mass_status = None
+        status_req_id = None
+        tot_num_reports = None
+        last_rpt_requested = None
+        if exec_type == "I":
+            is_mass_status = message.isSetField(fix.MassStatusReqID().getField())
+            if is_mass_status:
+                status_req_id = extract_message_field_value(fix.MassStatusReqID(), message, "str")
+                tot_num_reports = extract_message_field_value(fix.TotNumReports(), message, "int")
+                last_rpt_requested = extract_message_field_value(fix.LastRptRequested(), message, "bool")
+            else:
+                status_req_id = extract_message_field_value(fix.OrdStatusReqID(), message, "str")
+
         return ExecReport(
-            exchange, symbol, account, tx_time, exec_id, exec_type, cl_ord_id, ord_id,
-            side, price, avg_px, last_px, ord_type, ord_status, order_qty, min_qty,
-            cum_qty, leaves_qty, last_qty, tif, text=text
+            exchange=exchange,
+            symbol=symbol,
+            account=account,
+            tx_time=tx_time,
+            exec_id=exec_id,
+            exec_type=exec_type,
+            cl_ord_id=cl_ord_id,
+            ord_id=ord_id,
+            side=side,
+            price=price,
+            avg_px=avg_px,
+            last_px=last_px,
+            ord_type=ord_type,
+            ord_status=ord_status,
+            order_qty=order_qty,
+            min_qty=min_qty,
+            cum_qty=cum_qty,
+            leaves_qty=leaves_qty,
+            last_qty=last_qty,
+            tif=tif,
+            text=text,
+            status_req_id=status_req_id,
+            is_mass_status=is_mass_status,
+            tot_num_reports=tot_num_reports,
+            last_rpt_requested=last_rpt_requested,
         )
 
     def key(self):
@@ -153,7 +217,8 @@ class ExecReport(Message):
                 f'avg_px={self.avg_px}, '
                 f'tif={time_in_force_to_string(self.tif)}, '
                 f'status_req_id={self.status_req_id}, '
-                f'text={self.text}')
+                f'text={self.text}',
+                )
 
     DETAILED_FIELDS = ["exchange", "symbol", "account"]
 
