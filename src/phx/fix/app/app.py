@@ -11,7 +11,6 @@ import time
 from math import trunc
 from datetime import datetime
 from logging import Logger
-from threading import Lock
 from typing import List, Dict, Tuple, AnyStr
 
 import quickfix as fix
@@ -54,8 +53,6 @@ class App(fix.Application, FixInterface):
         self.export_dir = export_dir
         self.log_mkt_data = False
         self.group_log_count = 5
-        self.client_str = ""
-        self.server_str = ""
         self.session_id = None
         self.sessions = set()
         self.connected = False
@@ -79,31 +76,43 @@ class App(fix.Application, FixInterface):
         self.trade_reports = []
         self.position_reports = []
 
+    def _reset_session_states(self):
+        self.connected = False
+        self.session_id = None
+        if self.sessions is not None:
+            self.sessions.clear()
+        # TODO: Not sure whether those states need to be reset after session restart
+        # self.msgID = 0
+        # self.execID = 0
+        # self.requestID = 0
+        # self.clOrdID = 0
 
     def onCreate(self, session_id):
         try:
             self.logger.info(f"onCreate : Session {session_id.toString()}")
-            self.sessions.add(session_id)
-            self.session_id = session_id
             self.message_queue.put(Create(session_id), block=False)
+            self.connected = True
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
     def onLogon(self, session_id):
         try:
             self.logger.info(f"onLogon: session {session_id.toString()} logged in")
-            self.connected = True
             self.message_queue.put(Logon(session_id), block=False)
+            self.sessions.add(session_id)
+            self.session_id = session_id
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
     def onLogout(self, session_id):
         try:
             self.logger.info(f"onLogout: session {session_id.toString()} logged out")
-            self.connected = False
             self.message_queue.put(Logout(session_id), block=False)
+            self._reset_session_states()
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
+        finally:
+            self._reset_session_states()
 
     @staticmethod
     def get_random_string(length):
