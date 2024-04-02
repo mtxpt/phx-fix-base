@@ -30,4 +30,10 @@ class Trade:
 class Trades(Message):
 
     def __init__(self, trades: List[Trade]):
+        Message.__init__(self)
         self.trades = trades
+
+    def __str__(self):
+        return (f"Trades["
+                f"trades={self.trades}"
+                f"]")

@@ -12,15 +12,21 @@ class Security(object):
         self.min_price_increment = min_price_increment
 
     def __str__(self):
-        return (f'exchange={self.exchange}, '
-                f'symbol={self.symbol}, '
-                f'multiplier={self.multiplier}, '
-                f'min_trade_vol={self.min_trade_vol} '
-                f'min_price_increment={self.min_price_increment}'
-                )
+        return (f"Security["
+                f"exchange={self.exchange}, "
+                f"symbol={self.symbol}, "
+                f"multiplier={self.multiplier}, "
+                f"min_trade_vol={self.min_trade_vol} "
+                f"min_price_increment={self.min_price_increment}"
+                f"]")
 
 
 class SecurityReport(Message):
     def __init__(self, securities: Dict[Tuple[str, str], Security]):
+        Message.__init__(self)
         self.securities = securities
 
+    def __str__(self):
+        return (f"SecurityReport["
+                f"securities={self.securities}"
+                f"]")

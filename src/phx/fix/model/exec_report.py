@@ -40,6 +40,7 @@ class ExecReport(Message):
             tot_num_reports=None,
             last_rpt_requested=None
     ):
+        Message.__init__(self)
         self.exchange = exchange
         self.symbol = symbol
         self.account = account

@@ -25,18 +25,25 @@ class TopOfBook(Message):
     __slots__ = "bid_price", "bid_volume", "ask_price", "ask_volume"
 
     def __init__(self, bid_price, bid_volume, ask_price, ask_volume):
+        Message.__init__(self)
         self.bid_price = bid_price
         self.bid_volume = bid_volume
         self.ask_price = ask_price
         self.ask_volume = ask_volume
 
     def __str__(self):
-        return f"[{self.bid_volume}] {self.bid_price} | {self.ask_price} [{self.ask_volume}]"
+        return (f"TopOfBook["
+                f"bid_price={self.bid_price}, "
+                f"bid_volume={self.bid_volume}, "
+                f"ask_price={self.ask_price}, "
+                f"ask_volume={self.ask_volume}"
+                f"]")
 
 
 class OrderBookSnapshot(Message):
 
     def __init__(self, exchange, symbol, exchange_ts, local_ts, bids, asks):
+        Message.__init__(self)
         self.exchange = exchange
         self.symbol = symbol
         self.exchange_ts = exchange_ts
@@ -47,10 +54,21 @@ class OrderBookSnapshot(Message):
     def key(self) -> Tuple[str, str]:
         return self.exchange, self.symbol
 
+    def __str__(self):
+        return (f"OrderBookSnapshot["
+                f"exchange={self.exchange}, "
+                f"symbol={self.symbol}, "
+                f"exchange_ts={self.exchange_ts}, "
+                f"local_ts={self.local_ts}, "
+                f"bids={self.bids}, "
+                f"asks={self.asks}"
+                f"]")
+
 
 class OrderBookUpdate(Message):
 
     def __init__(self, exchange, symbol, exchange_ts, local_ts, updates: List[Tuple[float, float, bool]] = []):
+        Message.__init__(self)
         self.exchange = exchange
         self.symbol = symbol
         self.exchange_ts = exchange_ts
@@ -62,6 +80,15 @@ class OrderBookUpdate(Message):
 
     def add(self, price, size, is_bid):
         self.updates.append((price, size, is_bid))
+
+    def __str__(self):
+        return (f"OrderBookUpdate["
+                f"exchange={self.exchange}, "
+                f"symbol={self.symbol}, "
+                f"exchange_ts={self.exchange_ts}, "
+                f"local_ts={self.local_ts}, "
+                f"bids={self.updates}"
+                f"]")
 
 
 class OrderBook:

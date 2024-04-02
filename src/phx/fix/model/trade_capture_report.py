@@ -13,10 +13,11 @@ class TradeReportParty(object):
         self.party_role = party_role
 
     def __str__(self):
-        return (f"party_id: {self.party_id}, "
+        return (f"TradeReportParty["
+                f"party_id: {self.party_id}, "
                 f"party_id_source: {self.party_id_source}, "
                 f"party_role: {self.party_role}"
-                )
+                f"]")
 
 
 class TradeReportSide(object):
@@ -28,11 +29,12 @@ class TradeReportSide(object):
         self.parties: List[TradeReportParty] = parties
 
     def __str__(self):
-        return (f"side={self.side}, "
+        return (f"TradeReportSide["
+                f"side={self.side}, "
                 f"order_id={self.order_id}, "
                 f"account={self.account}, "
-                f"parties={','.join([str(p) for p in self.parties])}, "
-                )
+                f"parties={','.join([str(p) for p in self.parties])}"
+                f"]")
 
 
 class TradeReport(object):
@@ -55,7 +57,8 @@ class TradeReport(object):
         self.sides: List[TradeReportSide] = sides
 
     def __str__(self):
-        return (f"exchange={self.exchange}, "
+        return (f"TradeReport["
+                f"exchange={self.exchange}, "
                 f"symbol={self.symbol}, "
                 f"trade_report_id={self.trade_report_id}, "
                 f"trade_req_id={self.trade_req_id}, "
@@ -67,7 +70,7 @@ class TradeReport(object):
                 f"transact_time={self.transact_time}, "
                 f"trade_date={self.trade_date}, "
                 f"sides={','.join([str(s) for s in self.sides])}"
-                )
+                f"]")
 
     DETAILED_FIELDS = ["exchange", "symbol", "account", "previously_reported"]
 
@@ -114,6 +117,7 @@ class TradeReport(object):
 class TradeCaptureReport(Message):
 
     def __init__(self, reports: List[TradeReport]):
+        Message.__init__(self)
         self.reports = reports
 
     def tabulate(self, float_fmt=".2f", table_fmt="psql", compact=True):
@@ -130,3 +134,8 @@ class TradeCaptureReport(Message):
     def to_df(self, compact=False):
         data = [rep.field_str(compact=compact) for rep in self.reports]
         return pd.DataFrame(data, columns=TradeReport.field_names(compact=compact))
+
+    def __str__(self):
+        return (f"TradeCaptureReport["
+                f"reports={self.reports}"
+                f"]")

@@ -14,12 +14,13 @@ class Position:
         self.pos_type = pos_type
 
     def __str__(self):
-        return (f'symbol: {self.symbol}, '
-                f'account: {self.account}, '
-                f'long_qty: {self.long_qty}, '
-                f'short_qty: {self.short_qty}, '
-                f'pos_type: {self.pos_type}'
-                )
+        return (f"Position["
+                f"symbol: {self.symbol}, "
+                f"account: {self.account}, "
+                f"long_qty: {self.long_qty}, "
+                f"short_qty: {self.short_qty}, "
+                f"pos_type: {self.pos_type}"
+                f"]")
 
     DETAILED_FIELDS = ["exchange", "account"]
 
@@ -59,16 +60,17 @@ class PositionReport(object):
         tmp_positions_str = ""
         for pos in self.positions:
             tmp_positions_str += f"{pos}\n"
-            return (f'exchange={self.exchange}, '
-                    f'pos_maint_rpt_id={self.pos_maint_rpt_id}, '
-                    f'pos_req_id={self.pos_req_id}, '
-                    f'pos_req_type={self.pos_req_type}, '
-                    f'settle_price={self.settle_price}, '
-                    f'clearing_business_date={self.clearing_business_date}, '
-                    f'text={self.text}, '
-                    f'part_of_many={self.part_of_many}, '
-                    f'\npositions_list={tmp_positions_str}'
-                    )
+            return (f"PositionReport["
+                    f"exchange={self.exchange}, "
+                    f"pos_maint_rpt_id={self.pos_maint_rpt_id}, "
+                    f"pos_req_id={self.pos_req_id}, "
+                    f"pos_req_type={self.pos_req_type}, "
+                    f"settle_price={self.settle_price}, "
+                    f"clearing_business_date={self.clearing_business_date}, "
+                    f"text={self.text}, "
+                    f"part_of_many={self.part_of_many}, "
+                    f"\npositions_list={tmp_positions_str}"
+                    f"]")
 
     DETAILED_FIELDS = ["pos_maint_rpt_id", "pos_req_id"]
 
@@ -90,6 +92,7 @@ class PositionReport(object):
 class PositionReports(Message):
 
     def __init__(self, reports: List[PositionReport]):
+        Message.__init__(self)
         self.reports = reports
 
     def tabulate(self, float_fmt=".2f", table_fmt="psql", compact=True):
@@ -103,3 +106,8 @@ class PositionReports(Message):
             return tabulate(data, headers=headers, tablefmt=table_fmt, floatfmt=float_fmt)
         else:
             return None
+
+    def __str__(self):
+        return (f"PositionReports["
+                f"reports={self.reports}"
+                f"]")
