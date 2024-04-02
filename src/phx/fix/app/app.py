@@ -247,8 +247,8 @@ class App(fix.Application, FixInterface):
 
     def send_message_to_session(self, message: fix.Message):
         try:
-            self.logger.info(f'session_id {self.session_id} : send quick fix message {message.toString()}')
-            fix.Session.sendToTarget(message, self._session_id)
+            self.logger.info(f'session_id {self.session_id} : send quick fix message {fix_message_string(message)}')
+            fix.Session.sendToTarget(message, self.session_id)
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
