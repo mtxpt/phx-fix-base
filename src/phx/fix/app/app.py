@@ -170,6 +170,7 @@ class App(fix.Application, FixInterface):
                 self.on_reject(message, session_id)
             else:
                 self.logger.error(f"[toAdmin] {session_id} unhandled message | {msg}")
+            self.logger.debug(" [toAdmin] >> " + msg)
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
@@ -203,6 +204,7 @@ class App(fix.Application, FixInterface):
     def fromApp(self, message, session_id):
         try:
             msg = fix_message_string(message)
+            self.logger.debug(f"[fromApp] {session_id} | {msg}")
             self.received_app_message_history.append(msg)
             msg_type = fix.MsgType()
             message.getHeader().getField(msg_type)
