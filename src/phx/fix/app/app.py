@@ -155,6 +155,7 @@ class App(fix.Application, FixInterface):
                     self.logger.info(f"password signature={encoded_signature}, random_str={random_str}")
                     message.setField(fix.Username(username))
                     message.setField(fix.RawData(random_str))
+                    message.setField(fix.RawDataLength(len(random_str)))
                     message.setField(fix.Password(encoded_signature))
                 else:
                     self.logger.info(f"login with username={username}: using plain username/password authentication")
