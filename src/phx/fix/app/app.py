@@ -8,7 +8,6 @@ import random
 import ssl
 import string
 import time
-from math import trunc
 from datetime import datetime
 from logging import Logger
 from typing import List, Dict, Tuple, AnyStr
