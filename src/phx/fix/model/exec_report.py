@@ -197,29 +197,28 @@ class ExecReport(Message):
             )
 
     def __str__(self):
-        return (f'exchange={self.exchange}, '
-                f'symbol={self.symbol}, '
-                f'account={self.account}, '
-                f'exec_id={self.exec_id}, '
-                f'exec_type={exec_type_to_string(self.exec_type)}, '
-                f'tx_time={self.tx_time}, '
-                f'cl_ord_id={self.cl_ord_id}, '
-                f'ord_id={self.ord_id}, '
-                f'ord_status={order_status_to_string(self.ord_status)}, '
-                f'ord_type={order_type_to_string(self.ord_type)}, '
-                f'side={side_to_string(self.side)}, '
-                f'order_qty={self.order_qty}, '
-                f'price={self.price}, '
-                f'min_qty={self.min_qty}, '
-                f'leaves_qty={self.leaves_qty}, '
-                f'cum_qty={self.cum_qty}, '
-                f'last_qty={self.last_qty}, '
-                f'last_px={self.last_px}, '
-                f'avg_px={self.avg_px}, '
-                f'tif={time_in_force_to_string(self.tif)}, '
-                f'status_req_id={self.status_req_id}, '
-                f'text={self.text}',
-                )
+        return (f"exchange={self.exchange}, "
+                f"symbol={self.symbol}, "
+                f"account={self.account}, "
+                f"exec_id={self.exec_id}, "
+                f"exec_type={exec_type_to_string(self.exec_type)}, "
+                f"tx_time={self.tx_time}, "
+                f"cl_ord_id={self.cl_ord_id}, "
+                f"ord_id={self.ord_id}, "
+                f"ord_status={order_status_to_string(self.ord_status)}, "
+                f"ord_type={order_type_to_string(self.ord_type)}, "
+                f"side={side_to_string(self.side)}, "
+                f"order_qty={self.order_qty}, "
+                f"price={self.price}, "
+                f"min_qty={self.min_qty}, "
+                f"leaves_qty={self.leaves_qty}, "
+                f"cum_qty={self.cum_qty}, "
+                f"last_qty={self.last_qty}, "
+                f"last_px={self.last_px}, "
+                f"avg_px={self.avg_px}, "
+                f"tif={time_in_force_to_string(self.tif)}, "
+                f"status_req_id={self.status_req_id}, "
+                f"text={self.text}")
 
     DETAILED_FIELDS = ["exchange", "symbol", "account"]
 
