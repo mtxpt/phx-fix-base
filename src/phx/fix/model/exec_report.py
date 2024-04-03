@@ -308,6 +308,7 @@ class MassStatusExecReportNoOrders(Message):
                 f"text={self.text}"
                 f"]")
 
+
 def exec_reports_filtered_by_type(exec_reports: List[ExecReport], report_type: fix.ExecType) -> List[ExecReport]:
     res = []
     for rep in exec_reports:
