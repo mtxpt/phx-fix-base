@@ -252,6 +252,13 @@ class App(fix.Application, FixInterface):
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
+    def send_raw_message_to_session(self, message: bytes):
+        try:
+            self.logger.info(f'session_id {self.session_id} : send raw message in bytes {str(message)}')
+            fix.Session.sendToTarget(message, self.session_id)
+        except Exception as error:
+            self.logger.error(f"exception under c++ engine : {error}")
+
     def on_request_for_position_ack(self, message, session_id, sending_time):
         """
         Request for Positions Ack <AO> message
