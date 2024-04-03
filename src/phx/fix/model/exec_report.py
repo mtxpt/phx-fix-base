@@ -304,8 +304,8 @@ class MassStatusExecReportNoOrders(Message):
         self.symbol = symbol
         self.text = text
 
-    def key(self) -> Tuple[str, str]:
-        return self.exchange, self.symbol
+    def keys(self) -> Set[Tuple[str, str]]:
+        return {(self.exchange, self.symbol)}
 
     def __str__(self):
         return (f"MassStatusExecReportNoOrders["
