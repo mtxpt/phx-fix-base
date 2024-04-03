@@ -1,6 +1,6 @@
 import pandas as pd
 import quickfix as fix
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Set, Tuple
 from tabulate import tabulate
 from datetime import datetime
 
@@ -287,6 +287,9 @@ class MassStatusExecReport(Message):
         Message.__init__(self)
         self.reports = reports
 
+    def keys(self) -> Set[Tuple[str, str]]:
+        return {(r.exchange, r.symbol) for r in self.reports}
+
     def __str__(self):
         return (f"MassStatusExecReport["
                 f"reports={self.reports}"
@@ -300,6 +303,9 @@ class MassStatusExecReportNoOrders(Message):
         self.exchange = exchange
         self.symbol = symbol
         self.text = text
+
+    def key(self) -> Tuple[str, str]:
+        return self.exchange, self.symbol
 
     def __str__(self):
         return (f"MassStatusExecReportNoOrders["
