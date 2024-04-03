@@ -1,16 +1,10 @@
-from enum import Enum
 from typing import Optional, List, Callable, Union
 from pathlib import Path
 import quickfix as fix
 
+from phx.fix.app.auth import FixAuthenticationMethod
 from phx.utils import make_dirs, make_dirs_for_file
 from phx.fix.utils import dict_to_fix_dict, fix_session_default_config, fix_session_config
-
-
-class FixAuthenticationMethod(str, Enum):
-    PASSWORD = "password"
-    HMAC_SHA256 = "hmac_sha256"
-    HMAC_SHA256_TIMESTAMP = "hmac_sha256_timestamp"
 
 
 def get_settings_content(key, content: List[str]) -> Optional[str]:

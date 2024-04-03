@@ -132,16 +132,16 @@ class App(fix.Application, FixInterface):
                 username = self.session_settings.get(session_id).getString("Username")
                 password = self.session_settings.get(session_id).getString("Password")
                 auth_method = FixAuthenticationMethod(
-                    self.session_settings.get(session_id).getString("FixAuthenticateMethod")
+                    self.session_settings.get(session_id).getString("FixAuthenticationMethod")
                 )
                 if auth_method in [
                     FixAuthenticationMethod.HMAC_SHA256,
                     FixAuthenticationMethod.HMAC_SHA256_TIMESTAMP
                 ]:
-                    self.logger.info(f"login with username={username}: using key based authentication scheme with hmac")
+                    self.logger.info(f"login with username={username} using authentication method {auth_method}")
                     random_str = App.get_random_string(8)
                     secret_key = password
-                    if auth_method == "Y":
+                    if auth_method == FixAuthenticationMethod.HMAC_SHA256:
                         signature = hmac.new(
                             bytes(secret_key, "utf-8"),
                             bytes(random_str, "utf-8"),

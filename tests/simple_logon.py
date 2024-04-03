@@ -4,7 +4,7 @@ import threading
 import logging
 from pathlib import Path
 
-from phx.fix.app import App, AppRunner, FixSessionConfig
+from phx.fix.app import App, AppRunner, FixSessionConfig, FixAuthenticationMethod
 from phx.fix.model import Create, Logon, Logout
 from phx.utils import setup_logger, set_file_loging_handler, make_dirs
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         target_comp_id="phoenix-prime",
         user_name="trader",
         password="secret",
-        auth_by_key=True,  # TODO check if it works with new auth scheme with timestamp
+        fix_auth_method=FixAuthenticationMethod.HMAC_SHA256,
         account="T1",
         socket_connect_port="1238",
         socket_connect_host="127.0.0.1",

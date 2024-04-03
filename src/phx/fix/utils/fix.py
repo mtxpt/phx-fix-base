@@ -1,5 +1,7 @@
 import quickfix as fix
+
 from phx.utils.utils import str_to_datetime
+from phx.fix.app.auth import FixAuthenticationMethod
 
 
 def flip_trading_dir(direction):
@@ -508,17 +510,17 @@ def fix_session_default_config(file_log_path="./logs/") -> dict:
 
 
 def fix_session_config(
-        sender_comp_id,
-        target_comp_id,
-        user_name,
-        password,
-        auth_by_key=False,
-        begin_string="FIX.4.4",
-        socket_connect_port="1238",
-        socket_connect_host="127.0.0.1",
-        data_dictionary="fix_spec/FIX44.xml",
-        file_store_path="./sessions/",
-        account="A1"
+        sender_comp_id: str,
+        target_comp_id: str,
+        user_name: str,
+        password: str,
+        fix_auth_method: FixAuthenticationMethod = FixAuthenticationMethod.HMAC_SHA256_TIMESTAMP,
+        begin_string: str = "FIX.4.4",
+        socket_connect_port: str = "1238",
+        socket_connect_host: str = "127.0.0.1",
+        data_dictionary: str = "fix_spec/FIX44.xml",
+        file_store_path: str = "./sessions/",
+        account: str = "A1"
 ) -> dict:
     return {
         "BeginString": begin_string,
@@ -526,7 +528,7 @@ def fix_session_config(
         "TargetCompID": target_comp_id,
         "Username": user_name,
         "Password": password,
-        "AuthenticateByKey": "Y" if auth_by_key else "N",
+        "FixAuthenticationMethod": fix_auth_method.value,
         "HeartBtInt": 30,
         "SocketConnectPort": socket_connect_port,
         "SocketConnectHost": socket_connect_host,
