@@ -207,14 +207,6 @@ class FixInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def tick_round(
-            self,
-            price,
-            min_tick_size=None
-    ):
-        pass
-
-    @abc.abstractmethod
     def purge_fix_message_history(self):
         pass
 
