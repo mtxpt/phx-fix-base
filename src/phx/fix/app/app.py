@@ -688,8 +688,7 @@ class App(fix.Application, FixInterface):
         message.setField(fix.Symbol(symbol))
         message.setField(fix.OrderQty(order_qty))
         if price is not None:
-            price = self.tick_round(price, self.security_list[exchange, symbol].min_price_increment)
-            message.setField(fix.Price(price))
+            message.setField(fix.Price(price))  # tick rounding has to be done in upper layer
         message.setField(fix.OrdType(ord_type))
         if ord_type != fix.OrdType_MARKET:
             message.setField(fix.TimeInForce(tif))
@@ -764,8 +763,7 @@ class App(fix.Application, FixInterface):
         if order_qty is not None:
             message.setField(fix.OrderQty(order_qty))
         if price is not None:
-            price = self.tick_round(price, self.security_list[order.exchange, order.symbol].min_price_increment)
-            message.setField(fix.Price(price))
+            message.setField(fix.Price(price))  # tick rounding has to be done in upper layer
         if exec_instr is not None:
             message.setField(fix.ExecInst(exec_instr))
         if account is not None:
@@ -1047,13 +1045,6 @@ class App(fix.Application, FixInterface):
 
     def get_username(self):
         return self.session_settings.get(self.session_id).getString("Username")
-
-    def tick_round(self, price, min_tick_size=None):
-        if not min_tick_size or min_tick_size <= 0.0:
-            return round(price)
-        else:
-            rem = trunc((price % 1) / min_tick_size)
-            return trunc(price) + rem * min_tick_size
 
     def get_market_data_subscriptions(self):
         return copy.deepcopy(self.market_data_subscriptions)
