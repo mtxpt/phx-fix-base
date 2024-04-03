@@ -281,19 +281,19 @@ class ExecReport(Message):
         return pd.DataFrame(data, columns=ExecReport.field_names(compact=compact))
 
 
-class MassStatusReport(Message):
+class MassStatusExecReport(Message):
 
     def __init__(self, reports: List[ExecReport]):
         Message.__init__(self)
         self.reports = reports
 
     def __str__(self):
-        return (f"MassStatusReport["
+        return (f"MassStatusExecReport["
                 f"reports={self.reports}"
                 f"]")
 
 
-class MassStatusNoOrders(Message):
+class MassStatusExecReportNoOrders(Message):
 
     def __init__(self, exchange, symbol, text):
         Message.__init__(self)
@@ -302,7 +302,7 @@ class MassStatusNoOrders(Message):
         self.text = text
 
     def __str__(self):
-        return (f"MassStatusNoOrders["
+        return (f"MassStatusExecReportNoOrders["
                 f"exchange={self.exchange}, "
                 f"symbol={self.symbol}, "
                 f"text={self.text}"
