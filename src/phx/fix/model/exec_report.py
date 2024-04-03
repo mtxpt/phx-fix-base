@@ -281,6 +281,33 @@ class ExecReport(Message):
         return pd.DataFrame(data, columns=ExecReport.field_names(compact=compact))
 
 
+class MassStatusReport(Message):
+
+    def __init__(self, reports: List[ExecReport]):
+        Message.__init__(self)
+        self.reports = reports
+
+    def __str__(self):
+        return (f"MassStatusReport["
+                f"reports={self.reports}"
+                f"]")
+
+
+class MassStatusNoOrders(Message):
+
+    def __init__(self, exchange, symbol, text):
+        Message.__init__(self)
+        self.exchange = exchange
+        self.symbol = symbol
+        self.text = text
+
+    def __str__(self):
+        return (f"MassStatusNoOrders["
+                f"exchange={self.exchange}, "
+                f"symbol={self.symbol}, "
+                f"text={self.text}"
+                f"]")
+
 def exec_reports_filtered_by_type(exec_reports: List[ExecReport], report_type: fix.ExecType) -> List[ExecReport]:
     res = []
     for rep in exec_reports:
