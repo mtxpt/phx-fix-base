@@ -18,7 +18,7 @@ import quickfix44 as fix44
 
 from phx.fix.app.interface import FixInterface
 from phx.fix.model.exec_report import ExecReport
-from phx.fix.model.message import GatewayNotReady, Reject, BusinessMessageReject, MarketDataRequestReject
+from phx.fix.model.message import GatewayNotReady, Reject, BusinessMessageReject, MarketDataRequestReject, Message
 from phx.fix.model.message import Logon, Logout, Create, Heartbeat
 from phx.fix.model.message import PositionRequestAck, TradeCaptureReportRequestAck, OrderMassCancelReport
 from phx.fix.model.order import Order
@@ -41,7 +41,7 @@ class App(fix.Application, FixInterface):
 
     def __init__(
             self,
-            message_queue: queue.Queue,
+            message_queue: queue.Queue[Message],
             session_settings: fix.SessionSettings,
             logger: Logger,
             export_dir: str,
@@ -1072,6 +1072,7 @@ class App(fix.Application, FixInterface):
         self.received_admin_message_history = []
         self.sent_app_message_history = []
         self.sent_admin_message_history = []
+        self.logger.debug("Purge Plain FIX Message History In Base App")
 
     def get_fix_message_history(self, purge_history=False) -> Dict[str, List[str]]:
         history = {
@@ -1081,10 +1082,7 @@ class App(fix.Application, FixInterface):
             "sent_admin_message_history": self.sent_admin_message_history.copy(),
         }
         if purge_history:
-            self.received_app_message_history = []
-            self.received_admin_message_history = []
-            self.sent_app_message_history = []
-            self.sent_admin_message_history = []
+            self.purge_fix_message_history()
         return history
 
     def save_fix_message_history(self, path=None, fmt="csv", pre=None, post=None, purge_history=False):
