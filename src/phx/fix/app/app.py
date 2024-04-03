@@ -33,6 +33,7 @@ from phx.fix.utils import mass_cancel_reject_reason_to_string
 from phx.fix.utils import session_reject_reason_to_string, mass_cancel_request_type_to_string
 from phx.utils import make_dirs_for_file
 from phx.utils.utils import str_to_datetime
+from phx.fix.app.config import FixAuthenticationMethod
 
 
 class App(fix.Application, FixInterface):
@@ -130,18 +131,23 @@ class App(fix.Application, FixInterface):
             if msg_type.getValue() == fix.MsgType_Logon:
                 username = self.session_settings.get(session_id).getString("Username")
                 password = self.session_settings.get(session_id).getString("Password")
-                auth_by_key = self.session_settings.get(session_id).getString("AuthenticateByKey")
-                if auth_by_key in ["Latest", "Y"]:
+                auth_method = FixAuthenticationMethod(
+                    self.session_settings.get(session_id).getString("FixAuthenticateMethod")
+                )
+                if auth_method in [
+                    FixAuthenticationMethod.HMAC_SHA256,
+                    FixAuthenticationMethod.HMAC_SHA256_TIMESTAMP
+                ]:
                     self.logger.info(f"login with username={username}: using key based authentication scheme with hmac")
                     random_str = App.get_random_string(8)
                     secret_key = password
-                    if auth_by_key == "Y":
+                    if auth_method == "Y":
                         signature = hmac.new(
                             bytes(secret_key, "utf-8"),
                             bytes(random_str, "utf-8"),
                             digestmod=hashlib.sha256
                         ).digest()
-                    elif auth_by_key == "Latest":
+                    elif auth_method == FixAuthenticationMethod.HMAC_SHA256_TIMESTAMP:
                         random_str = str(round(time.time() * 1000)) + '.' + str(ssl.RAND_bytes(64))
                         signature = hmac.new(
                             secret_key.encode('utf-8'),
@@ -149,17 +155,19 @@ class App(fix.Application, FixInterface):
                             digestmod=hashlib.sha256
                         ).digest()
                     else:
-                        raise Exception(f"invalid authentication scheme {auth_by_key}")
+                        raise Exception(f"invalid authentication scheme {auth_method}")
                     encoded_signature = base64.b64encode(signature).decode('ascii')
                     self.logger.info(f"password signature={encoded_signature}, random_str={random_str}")
                     message.setField(fix.Username(username))
                     message.setField(fix.RawData(random_str))
                     message.setField(fix.RawDataLength(len(random_str)))
                     message.setField(fix.Password(encoded_signature))
-                else:
+                elif auth_method == FixAuthenticationMethod.PASSWORD:
                     self.logger.info(f"login with username={username}: using plain username/password authentication")
                     message.setField(fix.Username(username))
                     message.setField(fix.Password(password))
+                else:
+                    raise Exception(f"invalid authentication scheme {auth_method}")
                 self.logger.info(f"[toAdmin] logon {session_id} with user and pwd")
             elif msg_type.getValue() == fix.MsgType_Logout:
                 self.logger.debug(f"[toAdmin] {session_id} sending logout")

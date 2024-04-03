@@ -1,9 +1,16 @@
-from typing import Optional, List, Callable
+from enum import Enum
+from typing import Optional, List, Callable, Union
 from pathlib import Path
 import quickfix as fix
 
 from phx.utils import make_dirs, make_dirs_for_file
 from phx.fix.utils import dict_to_fix_dict, fix_session_default_config, fix_session_config
+
+
+class FixAuthenticationMethod(str, Enum):
+    PASSWORD = "password"
+    HMAC_SHA256 = "hmac_sha256"
+    HMAC_SHA256_TIMESTAMP = "hmac_sha256_timestamp"
 
 
 def get_settings_content(key, content: List[str]) -> Optional[str]:
@@ -60,7 +67,7 @@ def settings_to_string(settings: fix.SessionSettings, session_id, pre) -> str:
     rows.append("Username="+d.getString("Username"))
     rows.append("Password="+d.getString("Password"))
     rows.append("Account="+d.getString("Account"))
-    rows.append("AuthenticateByKey="+d.getString("AuthenticateByKey"))
+    rows.append("FixAuthenticationMethod="+d.getString("FixAuthenticationMethod"))
 
     return default_settings_to_string(settings, pre) + "\n" + "\n".join([pre + r for r in rows])
 
@@ -102,7 +109,7 @@ class FixSessionConfig(object):
             target_comp_id,
             user_name,
             password,
-            auth_by_key,
+            fix_auth_method: Union[FixAuthenticationMethod, str],
             account="A1",
             sub_dir=None,
             begin_string="FIX.4.4",
@@ -145,7 +152,7 @@ class FixSessionConfig(object):
                     target_comp_id,
                     user_name,
                     password,
-                    auth_by_key,
+                    FixAuthenticationMethod(fix_auth_method),
                     begin_string,
                     socket_connect_port,
                     socket_connect_host,
