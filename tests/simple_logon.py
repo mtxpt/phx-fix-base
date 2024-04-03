@@ -72,12 +72,14 @@ if __name__ == "__main__":
     message_queue = queue.Queue()
 
     # FIX session config
+    #   - adjust sender and target comp id as well as socket host and port
+    #   - provide user name and secret
     fix_configs = FixSessionConfig(
-        sender_comp_id="test",
-        target_comp_id="proxy",
+        sender_comp_id="fix-client",
+        target_comp_id="phoenix-prime",
         user_name="trader",
         password="secret",
-        auth_by_key=True,
+        auth_by_key=True,  # TODO check if it works with new auth scheme with timestamp
         account="T1",
         socket_connect_port="1238",
         socket_connect_host="127.0.0.1",
