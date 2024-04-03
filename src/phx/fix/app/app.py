@@ -458,8 +458,8 @@ class App(fix.Application, FixInterface):
             else:
                 if book_key != (exchange, symbol):
                     book_key = (exchange, symbol)
-                    book_update = book_updates.get(book_key, OrderBookUpdate(exchange, symbol, timestamp, receive_ts))
-                assert (book_update is not None and book_key == book_update.key())
+                    book_updates[book_key] = OrderBookUpdate(exchange, symbol, timestamp, receive_ts)
+                    book_update = book_updates[book_key]
                 book_update.add(price, size, entry_type == fix.MDEntryType_BID)
 
         if book_updates:
