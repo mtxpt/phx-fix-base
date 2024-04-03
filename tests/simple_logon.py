@@ -1,10 +1,17 @@
 import queue
 import threading
+import logging
 from typing import Callable
+from pathlib import Path
 
 from phx.fix.app import App, AppRunner, FixSessionConfig
 from phx.fix.model import Logon, Create
-from phx.utils import PathBase, setup_logger
+from phx.utils import setup_logger, set_file_loging_handler, make_dirs
+
+
+def temp_dir() -> Path:
+    local = Path(__file__).parent.resolve()
+    return local.parent.absolute() / "temp"
 
 
 class Strategy:
@@ -33,9 +40,12 @@ class Strategy:
 
 
 if __name__ == "__main__":
-    path_base = PathBase()
-    temp_dir = path_base.temp
-    logger = setup_logger("fix_service")
+    export_dir = temp_dir() / "simple_logon"
+    make_dirs(export_dir)
+    logger = set_file_loging_handler(
+        setup_logger("fix_service", level=logging.INFO),
+        export_dir / "fix_service.log"
+    )
     message_queue = queue.Queue()
     fix_configs = FixSessionConfig(
         sender_comp_id="test",
@@ -46,10 +56,11 @@ if __name__ == "__main__":
         account="T1",
         socket_connect_port="1238",
         socket_connect_host="127.0.0.1",
+        sub_dir="simple_logon",
     )
     fix_session_settings = fix_configs.get_fix_session_settings()
 
-    app = App(message_queue, fix_session_settings, logger, temp_dir)
+    app = App(message_queue, fix_session_settings, logger, export_dir)
     app_runner = AppRunner(app, fix_session_settings, fix_configs.get_session_id(), logger)
     strategy = Strategy(message_queue, lambda: app_runner.stop())
 

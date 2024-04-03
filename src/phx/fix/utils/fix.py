@@ -480,7 +480,7 @@ def dict_to_fix_dict(d: dict) -> fix.Dictionary:
     return fd
 
 
-def fix_session_default_config(file_log_path="./logs/"):
+def fix_session_default_config(file_log_path="./logs/") -> dict:
     """
     Settings that apply to all the sessions
     """
@@ -519,7 +519,7 @@ def fix_session_config(
         data_dictionary="fix_spec/FIX44.xml",
         file_store_path="./sessions/",
         account="A1"
-):
+) -> dict:
     return {
         "BeginString": begin_string,
         "SenderCompID": sender_comp_id,

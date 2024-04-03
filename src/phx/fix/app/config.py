@@ -3,7 +3,6 @@ from pathlib import Path
 import quickfix as fix
 
 from phx.utils import make_dirs, make_dirs_for_file
-from phx.utils.path_base import PathBase
 from phx.fix.utils import dict_to_fix_dict, fix_session_default_config, fix_session_config
 
 
@@ -93,7 +92,9 @@ def create_session_settings(self, filename: str, data_sub_dir: str = None, setti
         return fix.SessionSettings(fix_settings_file)
 
 
-class FixSessionConfig(PathBase):
+class FixSessionConfig(object):
+
+    FIX_SCHEMA_DICT = "src/phx/fix/specs/FIX44.xml"
 
     def __init__(
             self,
@@ -108,42 +109,52 @@ class FixSessionConfig(PathBase):
             socket_connect_port="1238",
             socket_connect_host="127.0.0.1",
             data_dir=None,
-            data_dictionary=None,
+            fix_schema_dict=None,
+            root=None
     ):
-        PathBase.__init__(self)
         self.sender_comp_id = sender_comp_id
-        if data_dictionary is None:
-            data_dictionary = self.root / "phx/fix/specs/FIX44.xml"
-        self.data_dictionary = data_dictionary
-        if data_dir is None:
-            if sub_dir is None:
-                data_dir = self.temp / self.sender_comp_id
-            else:
-                data_dir = self.temp / sub_dir / self.sender_comp_id
-        self.data_dir = data_dir
+
+        # different directories and files
+        local = Path(__file__).parent.resolve()
+        project_dir = local.parent.parent.parent.parent.absolute()
+        self.root = Path(root) if root is not None else project_dir
+        self.temp = self.root / "temp"
+        fix_schema_dict = self.FIX_SCHEMA_DICT if fix_schema_dict is None else fix_schema_dict
+        self.fix_schema_dict = self.root / fix_schema_dict
+        sub_dir = self.sender_comp_id if sub_dir is None else Path(sub_dir) / self.sender_comp_id
+        self.data_dir = self.temp / sub_dir if data_dir is None else data_dir
         self.log_dir = self.data_dir / "logs"
         self.session_dir = self.data_dir / "sessions"
         self.export_dir = self.data_dir / "exports"
+
+        # default config
         self.settings = fix.SessionSettings()
-        session_default_cfg = fix_session_default_config(self.log_dir)
-        fix_session_default_cfg = dict_to_fix_dict(session_default_cfg)
-        self.settings.set(fix_session_default_cfg)
-        session_cfg = fix_session_config(
-            sender_comp_id,
-            target_comp_id,
-            user_name,
-            password,
-            auth_by_key,
-            begin_string,
-            socket_connect_port,
-            socket_connect_host,
-            data_dictionary,
-            self.session_dir,
-            account
+        self.settings.set(
+            dict_to_fix_dict(
+                fix_session_default_config(self.log_dir)
+            )
         )
+
+        # session specific config
         self.session_id = fix.SessionID(begin_string, sender_comp_id, target_comp_id)
-        fix_session_cfg = dict_to_fix_dict(session_cfg)
-        self.settings.set(self.session_id, fix_session_cfg)
+        self.settings.set(
+            self.session_id,
+            dict_to_fix_dict(
+                fix_session_config(
+                    sender_comp_id,
+                    target_comp_id,
+                    user_name,
+                    password,
+                    auth_by_key,
+                    begin_string,
+                    socket_connect_port,
+                    socket_connect_host,
+                    self.fix_schema_dict,
+                    self.session_dir,
+                    account
+                )
+            )
+        )
 
     def get_session_id(self) -> fix.SessionID:
         return self.session_id
@@ -164,6 +175,7 @@ class FixSessionConfig(PathBase):
         self.to_str()
 
     def make_dirs(self):
+        make_dirs(self.data_dir)
         make_dirs(self.log_dir)
         make_dirs(self.session_dir)
         make_dirs(self.export_dir)
