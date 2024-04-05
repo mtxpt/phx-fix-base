@@ -87,8 +87,11 @@ if __name__ == "__main__":
     )
     fix_session_settings = fix_configs.get_fix_session_settings()
 
+    # create a FIX application and run it to connect to FIX server, which then pushes to message queue
     app = App(message_queue, fix_session_settings, logger, str(export_dir))
     app_runner = AppRunner(app, fix_session_settings, fix_configs.get_session_id(), logger)
+
+    # start the strategy which pulls from the message queue and dispatches accordingly
     strategy = Strategy(message_queue, app_runner)
     strategy.start()
     strategy.stop()
