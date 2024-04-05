@@ -1,15 +1,27 @@
-# Phoenix Prime FIX Client Application 
+# Phoenix Prime FIX Foundation Library 
 
 This repository provides the foundations for FIX based trading applications based on the widely used 
-[QuickFix](https://quickfixengine.org) open source library and its application framework.
+[QuickFix](https://quickfixengine.org) open source library and its application framework. 
+
+A simplistic FIX client implementing a FIX based trading strategy can be found in this 
+[repository](https://github.com/mtxpt/phx-fix-examples).
+
+
+## Requirements  
+
+The project requires
+  - Python >= 3.11
+  - QuickFix >= 1.15.1
+  - Dependencies as listed in `requirements.txt`
 
 
 ## Installation 
 
-It is highly recommended to create a new Python environment. The script
-`scripts/setup_all.sh` automates the creation of a conda based environment 
-with all dependencies installed. Optionally provide the argument `clean` to 
-remove existing environment and rebuild all. 
+It is highly recommended to create a new Python environment.
+
+On Linux or MacOs the script`scripts/setup_all.sh` automates the creation of a 
+conda based environment with all dependencies installed. Optionally provide the 
+argument `clean` to remove existing environment and rebuild all. 
 
 ```
 scripts/setup_all.sh [clean]
