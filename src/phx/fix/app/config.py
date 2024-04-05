@@ -120,8 +120,7 @@ class FixSessionConfig(object):
         project_dir = local.parent.parent.parent.parent.absolute()
         self.root = Path(root) if root is not None else project_dir
         self.temp = self.root / "temp"
-        fix_schema_dict = self.FIX_SCHEMA_DICT if fix_schema_dict is None else fix_schema_dict
-        self.fix_schema_dict = self.root / fix_schema_dict
+        self.fix_schema_dict = self.root / self.FIX_SCHEMA_DICT if fix_schema_dict is None else fix_schema_dict
         sub_dir = self.sender_comp_id if sub_dir is None else Path(sub_dir) / self.sender_comp_id
         self.data_dir = self.temp / sub_dir if data_dir is None else data_dir
         self.log_dir = self.data_dir / "logs"
