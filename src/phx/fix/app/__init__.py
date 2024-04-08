@@ -1,4 +1,3 @@
-from .auth import FixAuthenticationMethod
 from .config import FixSessionConfig
 from .app import App
 from .app_runner import AppRunner

@@ -6,3 +6,4 @@ from .position_report import Position, PositionReports
 from .security import Security, SecurityReport
 from .trade import Trade, Trades
 from .trade_capture_report import TradeReport, TradeCaptureReport
+from .auth import FixAuthenticationMethod
