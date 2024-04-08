@@ -686,7 +686,7 @@ class App(fix.Application, FixInterface):
             self, exchange, symbol, side, order_qty, price=None,
             ord_type=fix.OrdType_LIMIT,
             tif=fix.TimeInForce_GOOD_TILL_CANCEL,
-            account=None, min_qty=0, text=""
+            account=None, min_qty=0, text=" "
     ) -> Tuple[Order, fix.Message]:
         """
         Send new order single request
