@@ -87,27 +87,27 @@ class App(fix.Application, FixInterface):
         # self.requestID = 0
         # self.clOrdID = 0
 
-    def onCreate(self, session_id):
+    def onCreate(self, session_id: fix.SessionID):
         try:
             self.logger.info(f"onCreate : Session {session_id.toString()}")
-            self.message_queue.put(Create(session_id), block=False)
+            self.message_queue.put(Create(session_id.toString()), block=False)
             self.connected = True
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
-    def onLogon(self, session_id):
+    def onLogon(self, session_id: fix.SessionID):
         try:
             self.logger.info(f"onLogon: session {session_id.toString()} logged in")
-            self.message_queue.put(Logon(session_id), block=False)
+            self.message_queue.put(Logon(session_id.toString()), block=False)
             self.sessions.add(session_id)
             self.session_id = session_id
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
-    def onLogout(self, session_id):
+    def onLogout(self, session_id: fix.SessionID):
         try:
             self.logger.info(f"onLogout: session {session_id.toString()} logged out")
-            self.message_queue.put(Logout(session_id), block=False)
+            self.message_queue.put(Logout(session_id.toString()), block=False)
             self._reset_session_states()
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
@@ -120,7 +120,7 @@ class App(fix.Application, FixInterface):
         result_str = ''.join(random.choice(letters) for i in range(length))
         return result_str
 
-    def toAdmin(self, message, session_id):
+    def toAdmin(self, message: fix.Message , session_id: fix.SessionID):
         try:
             msg = fix_message_string(message)
             self.sent_admin_message_history.append(msg)
@@ -181,7 +181,7 @@ class App(fix.Application, FixInterface):
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
-    def fromAdmin(self, message, session_id):
+    def fromAdmin(self, message: fix.Message, session_id: fix.SessionID):
         try:
             msg = fix_message_string(message)
             self.received_admin_message_history.append(
@@ -200,7 +200,7 @@ class App(fix.Application, FixInterface):
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
-    def toApp(self, message, session_id):
+    def toApp(self, message: fix.Message, session_id: fix.SessionID):
         try:
             msg = fix_message_string(message)
             self.sent_app_message_history.append(msg)
@@ -208,7 +208,7 @@ class App(fix.Application, FixInterface):
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
-    def fromApp(self, message, session_id):
+    def fromApp(self, message: fix.Message, session_id: fix.SessionID):
         try:
             msg = fix_message_string(message)
             self.logger.debug(f"[fromApp] {session_id} | {msg}")
