@@ -1093,18 +1093,19 @@ class App(fix.Application, FixInterface):
     def save_fix_message_history(self, path=None, fmt="csv", pre=None, post=None, purge_history=False):
         if path is None:
             path = self.export_dir
-        self.logger.info(f"saving dataframes to {path}")
         msg_hist = self.get_fix_message_history(purge_history)
+        if sum([len(hist) for hist in msg_hist.values()]) > 0:
+            self.logger.info(f"saving FIX message history to {path}")
 
-        def filename(name):
-            pre_ = pre + "_" if pre is not None else ""
-            _post = "_" + post if post is not None else ""
-            return os.path.join(path, f"{pre_}{name}{_post}.{fmt}")
+            def filename(name):
+                pre_ = pre + "_" if pre is not None else ""
+                _post = "_" + post if post is not None else ""
+                return os.path.join(path, f"{pre_}{name}{_post}.{fmt}")
 
-        def save(fix_msg_history, name):
-            with open(make_dirs_for_file(filename(name)), "w") as f:
-                for row in fix_msg_history:
-                    f.write(row + "\n")
+            def save(fix_msg_history, name):
+                with open(make_dirs_for_file(filename(name)), "w") as f:
+                    for row in fix_msg_history:
+                        f.write(row + "\n")
 
-        for key, history in msg_hist.items():
-            save(history, key)
+            for key, history in msg_hist.items():
+                save(history, key)
