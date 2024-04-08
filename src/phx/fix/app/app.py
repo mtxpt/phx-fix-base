@@ -446,7 +446,7 @@ class App(fix.Application, FixInterface):
         group = fix44.MarketDataIncrementalRefresh.NoMDEntries()
         group_size = extract_message_field_value(fix.NoMDEntries(), message, "int")
 
-        self.logger.debug(f"on_market_data_refresh_incremental [{group_size}] {receive_ts}")
+        self.logger.debug(f"on_market_data_refresh_incremental receive_ts={receive_ts} group_size={group_size}")
 
         book_key = None
         book_update = None
