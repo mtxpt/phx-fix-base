@@ -1,0 +1,21 @@
+{
+  "trading_symbols": [["deribit", "BTC-PERPETUAL"]],
+
+  "quantity": 100,
+  "trade_interval": "00:00:10.000",
+
+  # cancel on exit
+  "cancel_orders_on_exit": True,
+  "use_mass_cancel_request": True,
+  "cancel_timeout_seconds": 5,
+  "save_before_cancel_orders_on_exit": True,
+
+  # error handing on gateway not ready
+  "cancel_on_gateway_not_ready": True,
+
+  # std configuration
+  "subscribe_for_position_updates": True,
+  "subscribe_for_trade_capture_reports": True,
+  "compare_order_status": True,
+  "print_reports": True,
+}
