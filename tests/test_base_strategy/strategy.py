@@ -51,7 +51,7 @@ class DeribitTestStrategy(StrategyBase):
         return direction
 
     def submit_market_orders(self):
-        FN = "submit_market_orders"
+        fn = "submit_market_orders"
         direction = self.get_trading_direction()
         symbols = self.get_symbols_to_trade()
         account = self.fix_interface.get_account()
@@ -63,12 +63,13 @@ class DeribitTestStrategy(StrategyBase):
                     exchange, symbol, direction, self.quantity, ord_type=fix.OrdType_MARKET, account=account
                 )
                 self.logger.info(
-                    f"{FN}: {exchange} Symbol {symbol}: MKT {direction} order submitted {fix_message_string(msg)}"
+                    f"{fn}: {exchange} Symbol {symbol}: MKT {direction} order submitted {fix_message_string(msg)}"
                 )
             else:
-                self.logger.info(f"{FN}: {exchange} Symbol {symbol}: mid-price missing!")
+                self.logger.info(f"{fn}: {exchange} Symbol {symbol}: mid-price missing!")
 
     def submit_limit_orders(self):
+        fn = "submit_limit_orders"
         direction = self.get_trading_direction()
         symbols = self.get_symbols_to_trade()
         account = self.fix_interface.get_account()
@@ -86,19 +87,19 @@ class DeribitTestStrategy(StrategyBase):
                         price = self.round_up(top_ask * (1 + TO_PIPS * self.aggressiveness_in_pips), key, 1)
                         dir_str = "buy"
                     self.logger.info(
-                        f"{exchange} Symbol {symbol}: top of book {(top_bid, top_ask)} => "
+                        f"{fn}: {exchange}/{symbol}: top of book {(top_bid, top_ask)} => "
                         f"aggressive {dir_str} order {self.quantity} @ {price}"
                     )
                     order, msg = self.fix_interface.new_order_single(
                         exchange, symbol, direction, self.quantity, price, ord_type=fix.OrdType_LIMIT, account=account
                     )
                     self.logger.info(
-                        f"{exchange} Symbol {symbol}: aggressive {dir_str} order submitted:{fix_message_string(msg)}"
+                        f"{fn}: {exchange}/{symbol}: aggressive {dir_str} order submitted:{fix_message_string(msg)}"
                     )
                 else:
-                    self.logger.info(f"order book for {exchange}/{symbol} bid:{top_bid} ask:{top_ask}")
+                    self.logger.info(f"{fn}: order book for {exchange}/{symbol} bid:{top_bid} ask:{top_ask}")
             else:
-                self.logger.warning(f"no order book for {exchange}/{symbol}")
+                self.logger.warning(f"{fn}: no order book for {exchange}/{symbol}")
 
     def trade(self):
         now = pd.Timestamp.utcnow()

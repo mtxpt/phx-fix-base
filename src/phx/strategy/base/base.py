@@ -272,7 +272,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
         )
         line = "\n".join(rows)
         self.logger.info(f"starting_barriers:\n{line}")
-        return len(self.starting_barriers) == 0
+        return not self.starting_barriers
 
     def stopping(self):
         if self.logged_in and self.cancel_orders_on_exit:
