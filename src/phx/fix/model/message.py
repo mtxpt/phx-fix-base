@@ -8,9 +8,9 @@ class Message(object):
 
 class Create(Message):
 
-    def __init__(self, session_id):
+    def __init__(self, session_id: str):
         Message.__init__(self)
-        self.session_id = session_id
+        self.session_id: str = session_id
 
     def __str__(self):
         return f"Create[session_id={self.session_id}]"
@@ -18,9 +18,9 @@ class Create(Message):
 
 class Logon(Message):
 
-    def __init__(self, session_id):
+    def __init__(self, session_id: str):
         Message.__init__(self)
-        self.session_id = session_id
+        self.session_id: str = session_id
 
     def __str__(self):
         return f"Logon[session_id={self.session_id}]"
@@ -28,9 +28,9 @@ class Logon(Message):
 
 class Logout(Message):
 
-    def __init__(self, session_id):
+    def __init__(self, session_id: str):
         Message.__init__(self)
-        self.session_id = session_id
+        self.session_id: str = session_id
 
     def __str__(self):
         return f"Logout[session_id={self.session_id}]"

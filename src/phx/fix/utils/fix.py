@@ -1,7 +1,7 @@
 import quickfix as fix
 
 from phx.utils.utils import str_to_datetime
-from phx.fix.app.auth import FixAuthenticationMethod
+from phx.fix.model.auth import FixAuthenticationMethod
 
 
 def flip_trading_dir(direction):
