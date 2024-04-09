@@ -18,7 +18,7 @@ class TradingMode(str, Enum):
     AGGRESSIVE_LIMIT_ORDERS = "aggressive_limit_orders"
 
 
-class DebitTestStrategy(StrategyBase):
+class DeribitTestStrategy(StrategyBase):
     def __init__(
             self,
             app_runner: AppRunner,

@@ -8,7 +8,7 @@ from pathlib import Path
 from phx.utils import setup_logger, set_file_loging_handler, make_dirs
 from phx.fix.app import App, AppRunner, FixSessionConfig
 from phx.fix.model.auth import FixAuthenticationMethod
-from strategy import DebitTestStrategy
+from strategy import DeribitTestStrategy
 
 
 def temp_dir() -> Path:
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     app = App(message_queue, fix_session_settings, logger, export_dir)
     app_runner = AppRunner(app, fix_session_settings, fix_configs.get_session_id(), logger)
 
-    strategy = DebitTestStrategy(app_runner, config, logger)
+    strategy = DeribitTestStrategy(app_runner, config, logger)
     strategy.run()
 
-    logger.info("DebitTestStrategy strategy finished")
+    logger.info("DeribitTestStrategy strategy finished")
