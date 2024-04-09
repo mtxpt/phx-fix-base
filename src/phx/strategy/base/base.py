@@ -45,7 +45,6 @@ def set_task(key, target_dict, current_dict, pre="  ") -> List[str]:
 
 
 class StrategyBase(StrategyInterface, abc.ABC):
-
     ORDERBOOK_SNAPSHOTS = "orderbook_snapshots"
     POSITION_SNAPSHOTS = "position_snapshots"
     WORKING_ORDERS = "working_orders"
@@ -260,16 +259,16 @@ class StrategyBase(StrategyInterface, abc.ABC):
         self.current_exec_state = StrategyExecState.STARTING
 
     def check_if_started(self):
-        # TODO - remove sum
         self.logger.info(f"starting_barriers: {self.starting_barriers}")
-        rows = sum(
-            [
-                single_task(self.SECURITY_REPORTS, self.starting_reference, self.starting_barriers),
-                set_task(self.ORDERBOOK_SNAPSHOTS, self.starting_reference, self.starting_barriers),
-                set_task(self.WORKING_ORDERS, self.starting_reference, self.starting_barriers),
-                single_task(self.POSITION_SNAPSHOTS, self.starting_reference, self.starting_barriers),
-            ], []
-        )
+        rows = [
+            item for row in
+                [
+                    single_task(self.SECURITY_REPORTS, self.starting_reference, self.starting_barriers),
+                    set_task(self.ORDERBOOK_SNAPSHOTS, self.starting_reference, self.starting_barriers),
+                    set_task(self.WORKING_ORDERS, self.starting_reference, self.starting_barriers),
+                    single_task(self.POSITION_SNAPSHOTS, self.starting_reference, self.starting_barriers),
+                ] for item in row
+        ]
         line = "\n".join(rows)
         self.logger.info(f"starting_barriers:\n{line}")
         return not self.starting_barriers
@@ -293,14 +292,16 @@ class StrategyBase(StrategyInterface, abc.ABC):
         self.current_exec_state = StrategyExecState.STOPPING
 
     def check_if_stopped(self) -> bool:
-        self.logger.debug(f"stopping_barriers: {self.stopping_barriers}")
-        rows = sum(
+        self.logger.info(f"stopping_barriers: {self.stopping_barriers}")
+        rows = [
+            item for row in
             [
                 set_task(self.CANCEL_OPEN_ORDERS, self.stopping_reference, self.stopping_barriers),
-            ], [])
+            ] for item in row
+        ]
         line = "\n".join(rows)
         self.logger.info(f"stopping_barriers:\n{line}")
-        return len(self.stopping_barriers) == 0
+        return not self.stopping_barriers
 
     def check_if_completed(self):
         now = self.now()
@@ -380,7 +381,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
 
     def now(self) -> pd.Timestamp:
         return pd.Timestamp.utcnow()
-            
+
     def start_timers(self):
         self.logger.info(f"starting timers...")
         self.recurring_timer.start()

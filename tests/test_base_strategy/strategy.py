@@ -81,20 +81,20 @@ class DeribitTestStrategy(StrategyBase):
                 top_ask = book.top_ask_price
                 if top_bid and top_ask:
                     if direction == fix.Side_SELL:
-                        price = self.round_down(top_bid * (1 - TO_PIPS * self.aggressiveness_in_pips), key, 1)
+                        price = self.round_down(top_bid * (1 + TO_PIPS * self.aggressiveness_in_pips), key, 1)
                         dir_str = "sell"
                     else:
-                        price = self.round_up(top_ask * (1 + TO_PIPS * self.aggressiveness_in_pips), key, 1)
+                        price = self.round_up(top_ask * (1 - TO_PIPS * self.aggressiveness_in_pips), key, 1)
                         dir_str = "buy"
                     self.logger.info(
                         f"{fn}: {exchange}/{symbol}: top of book {(top_bid, top_ask)} => "
-                        f"aggressive {dir_str} order {self.quantity} @ {price}"
+                        f"passive {dir_str} order {self.quantity} @ {price}"
                     )
                     order, msg = self.fix_interface.new_order_single(
                         exchange, symbol, direction, self.quantity, price, ord_type=fix.OrdType_LIMIT, account=account
                     )
                     self.logger.info(
-                        f"{fn}: {exchange}/{symbol}: aggressive {dir_str} order submitted:{fix_message_string(msg)}"
+                        f"{fn}: {exchange}/{symbol}: passive {dir_str} order submitted:{fix_message_string(msg)}"
                     )
                 else:
                     self.logger.info(f"{fn}: order book for {exchange}/{symbol} bid:{top_bid} ask:{top_ask}")
