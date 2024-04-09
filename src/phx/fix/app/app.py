@@ -37,6 +37,7 @@ from phx.fix.app.config import FixAuthenticationMethod
 
 
 REJECT_TEXT_GATEWAY_NOT_READY = "GATEWAY_NOT_READY"
+
 REJECT_TEXT_NOT_CONNECTED = "NOT CONNECTED"
 
 
