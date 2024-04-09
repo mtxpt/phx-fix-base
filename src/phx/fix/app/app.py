@@ -17,8 +17,8 @@ import quickfix44 as fix44
 
 from phx.fix.app.interface import FixInterface
 from phx.fix.model.exec_report import ExecReport
-from phx.fix.model.message import GatewayNotReady, Reject, BusinessMessageReject, MarketDataRequestReject, Message
-from phx.fix.model.message import Logon, Logout, Create, Heartbeat
+from phx.fix.model.message import Reject, BusinessMessageReject, MarketDataRequestReject, Message
+from phx.fix.model.message import Logon, Logout, Create, Heartbeat, GatewayNotReady, NotConnected
 from phx.fix.model.message import PositionRequestAck, TradeCaptureReportRequestAck, OrderMassCancelReport
 from phx.fix.model.order import Order
 from phx.fix.model.order_book import OrderBookSnapshot, OrderBookUpdate
@@ -34,6 +34,10 @@ from phx.fix.utils import session_reject_reason_to_string, mass_cancel_request_t
 from phx.utils import make_dirs_for_file
 from phx.utils.utils import str_to_datetime
 from phx.fix.app.config import FixAuthenticationMethod
+
+
+REJECT_TEXT_GATEWAY_NOT_READY = "GATEWAY_NOT_READY"
+REJECT_TEXT_NOT_CONNECTED = "NOT CONNECTED"
 
 
 class App(fix.Application, FixInterface):
@@ -491,8 +495,10 @@ class App(fix.Application, FixInterface):
         """
         report = ExecReport.from_message(message)
 
-        if report.exec_type == fix.ExecType_REJECTED and report.text == "GATEWAY_NOT_READY":
-            self.message_queue.put(GatewayNotReady(), block=False)
+        if report.exec_type == fix.ExecType_REJECTED and report.text == REJECT_TEXT_GATEWAY_NOT_READY:
+            self.message_queue.put(GatewayNotReady(report), block=False)
+        if report.exec_type == fix.ExecType_REJECTED and report.text == REJECT_TEXT_NOT_CONNECTED:
+            self.message_queue.put(NotConnected(report), block=False)
         else:
             self.message_queue.put(report, block=False)
 

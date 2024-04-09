@@ -48,11 +48,22 @@ class Heartbeat(Message):
 
 class GatewayNotReady(Message):
 
-    def __init__(self):
+    def __init__(self, report):
         Message.__init__(self)
+        self.report = report
 
     def __str__(self):
-        return f"GatewayNotReady[]"
+        return f"GatewayNotReady[{self.report}]"
+
+
+class NotConnected(Message):
+
+    def __init__(self, report):
+        Message.__init__(self)
+        self.report = report
+
+    def __str__(self):
+        return f"NotConnected[{self.report}]"
 
 
 class PositionRequestAck(Message):
