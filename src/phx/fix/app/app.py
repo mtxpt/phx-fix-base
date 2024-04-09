@@ -477,7 +477,8 @@ class App(fix.Application, FixInterface):
             else:
                 if book_key != (exchange, symbol):
                     book_key = (exchange, symbol)
-                    book_updates[book_key] = OrderBookUpdate(exchange, symbol, timestamp, receive_ts)
+                    if book_key not in book_updates:
+                        book_updates[book_key] = OrderBookUpdate(exchange, symbol, timestamp, receive_ts)
                     book_update = book_updates[book_key]
                 book_update.add(price, size, entry_type == fix.MDEntryType_BID)
 
