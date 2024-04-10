@@ -20,7 +20,7 @@ from phx.fix.utils import fix_message_string
 from phx.utils.thread import AlignedRepeatingTimer
 from phx.utils import CHECK_MARK, CROSS_MARK
 
-from phx.strategy.base import StrategyInterface, StrategyExecState, Ticker, RoundingDirection
+from phx.api.base import StrategyInterface, StrategyExecState, Ticker, RoundingDirection
 
 
 def single_task(key, target_dict, current_dict, pre="  ") -> List[str]:
