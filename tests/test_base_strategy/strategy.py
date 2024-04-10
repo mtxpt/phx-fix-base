@@ -9,8 +9,7 @@ from phx.fix.utils import fix_message_string, flip_trading_dir
 from phx.utils import TO_PIPS
 from scipy.stats import bernoulli
 
-from phx.strategy.base import StrategyBase, RoundingDirection
-# from phx.strategy.base.types import Ticker
+from phx.api.base import StrategyBase, RoundingDirection
 
 
 class TradingMode(str, Enum):
