@@ -18,7 +18,6 @@ netifaces-plus
 pytest
 deepdiff
 prometheus_client
-faster-fifo
 
 # arch other than arm64 and Windows should be able to install quickfix without a patch
 quickfix; platform_machine != 'arm64' and sys_platform != 'win32'
