@@ -94,26 +94,26 @@ class DeribitTestStrategy:
         direction = self.get_trading_direction()
         symbols = self.get_symbols_to_trade()
         account = self.phx_api.fix_interface.get_account()
-        for exchange, symbol in symbols:
-            ticker = (exchange, symbol)
+        for symbol in symbols:
+            ticker = (self.exchange, symbol)
             book = self.phx_api.order_books.get(ticker)
             if book and book.mid_price:
                 order, msg = self.phx_api.fix_interface.new_order_single(
-                    exchange, symbol, direction, self.quantity, ord_type=fix.OrdType_MARKET, account=account
+                    self.exchange, symbol, direction, self.quantity, ord_type=fix.OrdType_MARKET, account=account
                 )
                 self.logger.info(
-                    f"{fn}: {exchange=}/{symbol=}: MKT {direction} order submitted {fix_message_string(msg)}"
+                    f"{fn}: {self.exchange=}/{symbol=}: MKT {direction} order submitted {fix_message_string(msg)}"
                 )
             else:
-                self.logger.info(f"{fn}: {exchange=}/{symbol=}: mid-price missing!")
+                self.logger.info(f"{fn}: {self.exchange=}/{symbol=}: mid-price missing!")
 
     def submit_limit_orders(self):
         fn = "submit_limit_orders"
         direction = self.get_trading_direction()
         symbols = self.get_symbols_to_trade()
         account = self.phx_api.fix_interface.get_account()
-        for exchange, symbol in symbols:
-            ticker = (exchange, symbol)
+        for symbol in symbols:
+            ticker = (self.exchange, symbol)
             book = self.phx_api.order_books.get(ticker, None)
             min_tick_size = self.phx_api.get_security_attribute(ticker, 'min_price_increment')
             if book and min_tick_size:
@@ -127,22 +127,22 @@ class DeribitTestStrategy:
                         price = price_round_up(top_ask * (1 - TO_PIPS * self.aggressiveness_in_pips), min_tick_size)
                         dir_str = "buy"
                     self.logger.info(
-                        f"{fn}: {exchange}/{symbol}: top of book {(top_bid, top_ask)} => "
+                        f"{fn}: {self.exchange}/{symbol}: top of book {(top_bid, top_ask)} => "
                         f"passive {dir_str} order {self.quantity} @ {price}"
                     )
                     order, msg = self.phx_api.fix_interface.new_order_single(
-                        exchange, symbol, direction, self.quantity, price, ord_type=fix.OrdType_LIMIT, account=account
+                        self.exchange, symbol, direction, self.quantity, price, ord_type=fix.OrdType_LIMIT, account=account
                     )
                     self.logger.info(
-                        f"{fn}: {exchange}/{symbol}: passive {dir_str} order submitted:{fix_message_string(msg)}"
+                        f"{fn}: {self.exchange}/{symbol}: passive {dir_str} order submitted:{fix_message_string(msg)}"
                     )
                 else:
                     self.logger.info(
-                        f"{fn}: order book for {exchange=}/{symbol=} {top_bid=} {top_ask=}"
+                        f"{fn}: order book for {self.exchange=}/{symbol=} {top_bid=} {top_ask=}"
                     )
             else:
                 self.logger.warning(
-                    f"{fn}: empty either order book for {exchange=}/{symbol=} or {min_tick_size=}"
+                    f"{fn}: empty either order book for {self.exchange=}/{symbol=} or {min_tick_size=}"
                 )
 
     def trade(self):

@@ -423,7 +423,6 @@ class PhxApi(ApiInterface, abc.ABC):
         for security in msg.securities.values():
             self.security_list[(security.exchange, security.symbol)] = security
             self.logger.info(f"{security}")
-        self.starting_barriers.pop(DependencyAction.SECURITY_REPORTS, 0)
         # indicate that API received security reports
         # TODO - allow for adding new exchanges to the list
         self.dependency_actions[DependencyAction.SECURITY_REPORTS] = list(exchanges)
