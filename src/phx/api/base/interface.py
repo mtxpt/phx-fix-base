@@ -13,7 +13,7 @@ from phx.fix.model import OrderMassCancelReport, MassStatusExecReport, MassStatu
 
 class StrategyExecState(IntEnum):
     STOPPED = 0
-    LOGING_IN = 1
+    LOGGING_IN = 1
     LOGGED_IN = 2
     STARTING = 3
     STARTED = 4
