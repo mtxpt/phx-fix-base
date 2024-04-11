@@ -1,5 +1,9 @@
 import datetime
-import time
+import pandas as pd
+
+
+def utcnow() -> pd.Timestamp:
+    return pd.Timestamp.utcnow()
 
 
 def round_up_second(t: datetime.datetime) -> datetime.datetime:

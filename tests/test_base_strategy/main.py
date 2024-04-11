@@ -49,6 +49,6 @@ if __name__ == "__main__":
     app_runner = AppRunner(app, fix_session_settings, fix_configs.get_session_id(), logger)
 
     strategy = DeribitTestStrategy(app_runner, config, logger)
-    strategy.run()
+    strategy.strategy_loop()
 
     logger.info("DeribitTestStrategy strategy finished")

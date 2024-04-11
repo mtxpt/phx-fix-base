@@ -11,27 +11,7 @@ from phx.fix.model import PositionRequestAck, TradeCaptureReportRequestAck
 from phx.fix.model import OrderMassCancelReport, MassStatusExecReport, MassStatusExecReportNoOrders
 
 
-class StrategyExecState(IntEnum):
-    STOPPED = 0
-    LOGING_IN = 1
-    LOGGED_IN = 2
-    STARTING = 3
-    STARTED = 4
-    STOPPING = 5
-    LOGGED_OUT = 6
-    FINISHED = 7
-
-
-class RoundingDirection(IntEnum):
-    UP = 0
-    DOWN = 1
-
-
-class StrategyInterface(abc.ABC):
-
-    @abc.abstractmethod
-    def trade(self):
-        pass
+class ApiInterface(abc.ABC):
 
     @abc.abstractmethod
     def run(self) -> bool:
@@ -50,11 +30,7 @@ class StrategyInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def starting(self):
-        pass
-
-    @abc.abstractmethod
-    def check_if_started(self) -> bool:
+    def subscribe(self):
         pass
 
     @abc.abstractmethod
@@ -62,12 +38,9 @@ class StrategyInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def check_if_stopped(self) -> bool:
+    def is_stopped(self) -> bool:
         pass
 
-    @abc.abstractmethod
-    def check_if_completed(self) -> bool:
-        pass
 
     @abc.abstractmethod
     def request_security_data(self):
@@ -91,10 +64,6 @@ class StrategyInterface(abc.ABC):
 
     @abc.abstractmethod
     def subscribe_trade_capture_reports(self):
-        pass
-
-    @abc.abstractmethod
-    def now(self) -> pd.Timestamp:
         pass
 
     @abc.abstractmethod
@@ -193,21 +162,21 @@ class StrategyInterface(abc.ABC):
     def on_trades(self, msg: Trades):
         pass
 
-    @abc.abstractmethod
-    def round(
-            self,
-            price: float,
-            direction: RoundingDirection,
-            ticker: Tuple[str, str],
-            min_tick_size=None
-    ) -> Optional[float]:
-        pass
-
-    @abc.abstractmethod
-    def tick_round(
-            self,
-            price,
-            ticker: Tuple[str, str],
-            min_tick_size=None
-    ) -> float:
-        pass
+    # @abc.abstractmethod
+    # def round(
+    #         self,
+    #         price: float,
+    #         direction: RoundingDirection,
+    #         ticker: Tuple[str, str],
+    #         min_tick_size=None
+    # ) -> Optional[float]:
+    #     pass
+    #
+    # @abc.abstractmethod
+    # def tick_round(
+    #         self,
+    #         price,
+    #         ticker: Tuple[str, str],
+    #         min_tick_size=None
+    # ) -> float:
+    #     pass

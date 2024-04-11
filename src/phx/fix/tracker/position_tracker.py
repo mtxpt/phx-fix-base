@@ -46,6 +46,7 @@ class PositionTracker(object):
         return self.open_net_positions.get((exchange, symbol, account), None)
 
     def compare_snapshot(self, other) -> dict:
+        # TODO: check if needed, not used anywhere
         diff = {}
         if isinstance(other, PositionTracker):
             keys = set(self.open_net_positions.keys()).union(set(other.open_net_positions.keys()))
@@ -58,7 +59,13 @@ class PositionTracker(object):
                     diff[key] = self.open_net_positions[key], other.open_net_positions[key]
         return diff
 
-    def set_snapshots(self, reports: List[PositionReport], last_update_time, overwrite=False):
+    def set_snapshots(
+        self,
+        reports: List[PositionReport],
+        last_update_time,
+        overwrite=False,
+        default_exchange=None,
+    ) -> None:
         if self.snapshots_obtained and not overwrite:
             return
 
@@ -68,8 +75,9 @@ class PositionTracker(object):
             positions = report.positions
             if positions is not None and isinstance(positions, list):
                 for pos in positions:
-                    exchange = self.NO_EXCHANGE if report.exchange is None or len(report.exchange) == 0 \
-                        else report.exchange
+                    exchange = report.exchange if report.exchange else default_exchange
+                    if not exchange:
+                        exchange = self.NO_EXCHANGE
 
                     transact_time = last_update_time
                     # transact_time = report.clearing_business_date  # datetime.now(tz=datetime.timezone.utc) ???
@@ -79,7 +87,7 @@ class PositionTracker(object):
                             total_quantity = pos.long_qty - pos.short_qty
                             if total_quantity >= 0:
                                 qty = total_quantity
-                                side = fix.Side_SELL
+                                side = fix.Side_BUY
                             else:
                                 qty = abs(total_quantity)
                                 side = fix.Side_SELL
