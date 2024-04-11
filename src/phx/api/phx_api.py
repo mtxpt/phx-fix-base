@@ -1,5 +1,4 @@
 import abc
-import math
 import queue
 import threading
 from enum import Enum
@@ -192,7 +191,6 @@ class PhxApi(ApiInterface, abc.ABC):
                 self.logger.info(
                     f"queue empty after waiting {self.queue_timeout.total_seconds()}s"
                 )
-
             except Exception as e:
                 self.exception = e
                 self.logger.exception(
@@ -273,7 +271,6 @@ class PhxApi(ApiInterface, abc.ABC):
     def stopping(self):
         if self.logged_in and self.cancel_orders_on_exit:
             self.logger.info(f"cancelling orders on exit")
-
             if self.use_mass_cancel_request:
                 for (exchange, symbol) in self.trading_symbols:
                     msg = self.fix_interface.order_mass_cancel_request(exchange, symbol)

@@ -35,6 +35,5 @@ dependencies = [
     "tomli",
     "tomli-w",
     "deepdiff",
-    "prometheus_client",
-    "faster-fifo",
+    "prometheus_client"
 ]
