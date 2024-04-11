@@ -71,6 +71,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
         self.queue_timeout = pd.Timedelta(config.get("queue_timeout", "00:00:10"))
         self.logged_in = False
         self.completed = False
+        self.app_runner_running = False
 
         # symbols to use, make sure we have really a set of tuples
         self.mkt_symbols: Set[Ticker] = {tuple(pair) for pair in mkt_symbols}
@@ -137,7 +138,8 @@ class StrategyBase(StrategyInterface, abc.ABC):
         assert self.current_exec_state == StrategyExecState.STOPPED
         if self.check_if_can_start():
             self.app_runner.start()
-            self.current_exec_state = StrategyExecState.LOGING_IN
+            self.app_runner_running = True
+            self.current_exec_state = StrategyExecState.LOGGING_IN
             self.dispatch()
             return True
         return False
@@ -210,6 +212,9 @@ class StrategyBase(StrategyInterface, abc.ABC):
 
         finally:
             self.stop_timers()
+            if self.app_runner_running:
+                self.app_runner.stop()
+                self.app_runner_running = False
             try:
                 self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
             except Exception as e:
@@ -223,7 +228,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
             if self.check_if_completed():
                 self.stopping()
 
-        elif self.current_exec_state == StrategyExecState.LOGING_IN:
+        elif self.current_exec_state == StrategyExecState.LOGGING_IN:
             if self.logged_in:
                 self.current_exec_state = StrategyExecState.LOGGED_IN
                 self.exec_state_evaluation()
@@ -240,6 +245,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
         elif self.current_exec_state == StrategyExecState.STOPPING:
             if self.check_if_stopped():
                 self.app_runner.stop()
+                self.app_runner_running = False
                 self.current_exec_state = StrategyExecState.FINISHED
 
     def check_if_can_start(self):
@@ -277,7 +283,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
         if self.logged_in and self.cancel_orders_on_exit:
             self.logger.info(f"cancelling orders on exit")
             self.stopping_barriers = self.create_stopping_barriers()
-
+            self.stopping_reference = self.create_stopping_barriers()
             if self.use_mass_cancel_request:
                 for (exchange, symbol) in self.trading_symbols:
                     msg = self.fix_interface.order_mass_cancel_request(exchange, symbol)
@@ -306,7 +312,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
     def check_if_completed(self):
         now = self.now()
         end = self.start_time + self.timeout
-        self.completed = (now >= end)
+        self.completed = (not self.logged_in) and (now >= end)
         self.logger.info(
             f"check_if_completed: start:{self.start_time} "
             f"end:{end} now:{now} completed:{self.completed}"
@@ -407,7 +413,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
         pass
 
     def on_logout(self, msg: Logout):
-        if self.current_exec_state == StrategyExecState.LOGING_IN:
+        if self.current_exec_state == StrategyExecState.LOGGING_IN:
             self.completed = True
             error = f"{msg} before successful login most likely caused connection problem or by invalid credentials"
             self.exception = Exception(error)
