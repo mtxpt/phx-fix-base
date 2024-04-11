@@ -24,7 +24,7 @@ class DeribitTestStrategy(StrategyBase):
             config: dict,
             logger: Logger = None,
     ):
-        trading_symbols = [("deribit", "BTC-PERPETUAL")]
+        trading_symbols = [("deribit", "BTC-PERPETUAL"), ("deribit", "ETH-PERPETUAL")]
 
         super().__init__(
             app_runner,

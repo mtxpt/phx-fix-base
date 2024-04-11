@@ -1,6 +1,7 @@
 import abc
 import math
 import queue
+from enum import Enum
 from logging import Logger
 from typing import List, Set, Dict, Tuple, Union, Optional
 
@@ -44,12 +45,14 @@ def set_task(key, target_dict, current_dict, pre="  ") -> List[str]:
     return rows
 
 
-class StrategyBase(StrategyInterface, abc.ABC):
+class DependencyAction(Enum):
     ORDERBOOK_SNAPSHOTS = "orderbook_snapshots"
     POSITION_SNAPSHOTS = "position_snapshots"
     WORKING_ORDERS = "working_orders"
     SECURITY_REPORTS = "security_reports"
     CANCEL_OPEN_ORDERS = "cancel_open_orders"
+
+class StrategyBase(StrategyInterface, abc.ABC):
 
     def __init__(
             self,
@@ -122,15 +125,15 @@ class StrategyBase(StrategyInterface, abc.ABC):
 
     def create_starting_barriers(self) -> dict:
         return {
-            self.ORDERBOOK_SNAPSHOTS: self.mkt_symbols.copy(),
-            self.POSITION_SNAPSHOTS: 1,
-            self.WORKING_ORDERS: self.trading_symbols.copy(),
-            self.SECURITY_REPORTS: 1
+            DependencyAction.ORDERBOOK_SNAPSHOTS: self.mkt_symbols.copy(),
+            DependencyAction.POSITION_SNAPSHOTS: 1,
+            DependencyAction.WORKING_ORDERS: self.trading_symbols.copy(),
+            DependencyAction.SECURITY_REPORTS: 1
         }
 
     def create_stopping_barriers(self) -> dict:
         return {
-            self.CANCEL_OPEN_ORDERS: self.trading_symbols.copy()
+            DependencyAction.CANCEL_OPEN_ORDERS: self.trading_symbols.copy()
         }
 
     def run(self) -> bool:
@@ -263,10 +266,10 @@ class StrategyBase(StrategyInterface, abc.ABC):
         rows = [
             item for row in
                 [
-                    single_task(self.SECURITY_REPORTS, self.starting_reference, self.starting_barriers),
-                    set_task(self.ORDERBOOK_SNAPSHOTS, self.starting_reference, self.starting_barriers),
-                    set_task(self.WORKING_ORDERS, self.starting_reference, self.starting_barriers),
-                    single_task(self.POSITION_SNAPSHOTS, self.starting_reference, self.starting_barriers),
+                    single_task(DependencyAction.SECURITY_REPORTS, self.starting_reference, self.starting_barriers),
+                    set_task(DependencyAction.ORDERBOOK_SNAPSHOTS, self.starting_reference, self.starting_barriers),
+                    set_task(DependencyAction.WORKING_ORDERS, self.starting_reference, self.starting_barriers),
+                    single_task(DependencyAction.POSITION_SNAPSHOTS, self.starting_reference, self.starting_barriers),
                 ] for item in row
         ]
         line = "\n".join(rows)
@@ -296,7 +299,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
         rows = [
             item for row in
             [
-                set_task(self.CANCEL_OPEN_ORDERS, self.stopping_reference, self.stopping_barriers),
+                set_task(DependencyAction.CANCEL_OPEN_ORDERS, self.stopping_reference, self.stopping_barriers),
             ] for item in row
         ]
         line = "\n".join(rows)
@@ -436,14 +439,14 @@ class StrategyBase(StrategyInterface, abc.ABC):
         for security in msg.securities.values():
             self.security_list[(security.exchange, security.symbol)] = security
             self.logger.info(f"{security}")
-        self.starting_barriers.pop(self.SECURITY_REPORTS, 0)
+        self.starting_barriers.pop(DependencyAction.SECURITY_REPORTS, 0)
         self.logger.info(f"<==== security list completed")
 
     def on_position_request_ack(self, msg: PositionRequestAck):
         self.logger.info(f"on_position_request_ack: {msg}")
 
     def on_position_reports(self, msg: PositionReports):
-        if self.starting_barriers.pop(self.POSITION_SNAPSHOTS, 0):
+        if self.starting_barriers.pop(DependencyAction.POSITION_SNAPSHOTS, 0):
             self.position_tracker.set_snapshots(msg.reports, self.now(), overwrite=True)
             self.logger.info(
                 f"<==== initial position reports completed \n"
@@ -482,13 +485,13 @@ class StrategyBase(StrategyInterface, abc.ABC):
         else:
             self.order_tracker.process(msg, self.now())
 
-            if self.CANCEL_OPEN_ORDERS in self.stopping_barriers:
+            if DependencyAction.CANCEL_OPEN_ORDERS in self.stopping_barriers:
                 open_orders = self.order_tracker.open_orders
                 if len(open_orders) > 0:
                     order_status_count = Order.order_status_count(open_orders.values(), True)
                     self.logger.info(f"waiting to cancel {len(open_orders)} open orders: {order_status_count}")
                 else:
-                    self.stopping_barriers.pop(self.CANCEL_OPEN_ORDERS)
+                    self.stopping_barriers.pop(DependencyAction.CANCEL_OPEN_ORDERS)
                     self.logger.info(f"<==== all open orders cancelled")
 
                     self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
@@ -503,7 +506,7 @@ class StrategyBase(StrategyInterface, abc.ABC):
             )
 
     def on_mass_status_exec_report(self, msg: Union[MassStatusExecReport, MassStatusExecReportNoOrders]):
-        remaining: Set[Ticker] = self.starting_barriers[self.WORKING_ORDERS]
+        remaining: Set[Ticker] = self.starting_barriers[DependencyAction.WORKING_ORDERS]
         keys: Set[Ticker] = msg.keys()
         if keys.issubset(remaining):
             if isinstance(msg, MassStatusExecReport):
@@ -528,9 +531,9 @@ class StrategyBase(StrategyInterface, abc.ABC):
                 )
 
             remaining = remaining - keys
-            self.starting_barriers[self.WORKING_ORDERS] = remaining
+            self.starting_barriers[DependencyAction.WORKING_ORDERS] = remaining
             if len(remaining) == 0:
-                self.starting_barriers.pop(self.WORKING_ORDERS, None)
+                self.starting_barriers.pop(DependencyAction.WORKING_ORDERS, None)
                 self.logger.info(f"<==== obtained working order status")
             else:
                 self.logger.info(f"waiting for working orders status for {remaining}")
@@ -540,24 +543,24 @@ class StrategyBase(StrategyInterface, abc.ABC):
 
     def on_order_mass_cancel_report(self, msg: OrderMassCancelReport):
         self.logger.info(f"on_order_mass_cancel_report: {msg}")
-        if self.CANCEL_OPEN_ORDERS in self.stopping_barriers:
-            remaining = self.stopping_barriers[self.CANCEL_OPEN_ORDERS]
+        if DependencyAction.CANCEL_OPEN_ORDERS in self.stopping_barriers:
+            remaining = self.stopping_barriers[DependencyAction.CANCEL_OPEN_ORDERS]
             if msg.response != fix.MassCancelResponse_CANCEL_REQUEST_REJECTED:
                 remaining.remove((msg.exchange, msg.symbol))
             self.logger.info(
                 f"mass cancel response {msg.response} "
                 f"waiting to cancel orders for {remaining}")
             if len(remaining) == 0:
-                self.stopping_barriers.pop(self.CANCEL_OPEN_ORDERS)
+                self.stopping_barriers.pop(DependencyAction.CANCEL_OPEN_ORDERS)
                 self.logger.info(f"<==== all open orders cancelled")
 
     def on_order_book_snapshot(self, msg: OrderBookSnapshot):
         self.logger.info(f"on_order_book_snapshot: {msg.key()}")
-        if self.ORDERBOOK_SNAPSHOTS in self.starting_barriers:
-            remaining = self.starting_barriers[self.ORDERBOOK_SNAPSHOTS]
+        if DependencyAction.ORDERBOOK_SNAPSHOTS in self.starting_barriers:
+            remaining = self.starting_barriers[DependencyAction.ORDERBOOK_SNAPSHOTS]
             remaining.remove((msg.exchange, msg.symbol))
             if len(remaining) == 0:
-                self.starting_barriers.pop(self.ORDERBOOK_SNAPSHOTS)
+                self.starting_barriers.pop(DependencyAction.ORDERBOOK_SNAPSHOTS)
                 self.logger.info(f"<==== order book snapshots completed")
             else:
                 self.logger.info(f"waiting for orderbook snapshots for {remaining}")
