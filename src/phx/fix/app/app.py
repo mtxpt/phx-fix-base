@@ -127,8 +127,6 @@ class App(fix.Application, FixInterface):
 
     def toAdmin(self, message: fix.Message , session_id: fix.SessionID):
         try:
-            msg = fix_message_string(message)
-            self.sent_admin_message_history.append(msg)
 
             msg_type = fix.MsgType()
             message.getHeader().getField(msg_type)
@@ -184,8 +182,8 @@ class App(fix.Application, FixInterface):
                 self.logger.error(f"[toAdmin] {session_id} unhandled message | {fix_message_string(message)}")
             #Need to record down the final modified to admin message
             msg = fix_message_string(message)
-            self.logger.debug(f"[toAdmin] {session_id} | {msg} ")
             self.sent_admin_message_history.append(msg)
+            self.logger.debug(f"[toAdmin] {session_id} | {msg} ")
         except Exception as error:
             self.logger.error(f"exception under c++ engine : {error}")
 
