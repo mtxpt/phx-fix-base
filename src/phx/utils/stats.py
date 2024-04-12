@@ -1,8 +1,10 @@
-from datetime import datetime, timedelta
 from collections import deque
+from datetime import datetime, timedelta
 from typing import Tuple
+
 from phx.model.trade import Trade
 from phx.utils import TO_PIPS
+
 
 class StreamingMovingAverageByCount(object):
     def __init__(self, window_size):

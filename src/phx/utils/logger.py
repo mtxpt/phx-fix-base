@@ -1,5 +1,9 @@
 import logging
+import sys
 
+
+def fn() -> str:
+    return sys._getframe().f_code.co_name
 
 def setup_logger(logger_name, level=logging.INFO) -> logging.Logger:
     logger = logging.getLogger(logger_name)

@@ -1,4 +1,4 @@
-from typing import Tuple, Set
+from typing import Set, Tuple
 
 ExchangeId = str
 SymbolId = str

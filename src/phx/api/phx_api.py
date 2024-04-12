@@ -1,5 +1,6 @@
 import abc
 import queue
+import sys
 import threading
 from enum import Enum
 from logging import Logger
@@ -19,7 +20,7 @@ from phx.fix.model.order_book import OrderBook
 from phx.fix.tracker import OrderTracker, PositionTracker
 from phx.fix.utils import fix_message_string
 from phx.utils.thread import AlignedRepeatingTimer
-from phx.utils import CHECK_MARK, CROSS_MARK
+from phx.utils import CHECK_MARK, CROSS_MARK, fn
 from phx.utils.time import utcnow
 
 # from phx.utils.price_utils import RoundingDirection, price_round, price_round_down, price_round_up
@@ -76,7 +77,7 @@ class PhxApi(ApiInterface, abc.ABC):
         self.queue_timeout = pd.Timedelta(config.get("queue_timeout", "00:00:10"))
         self.logged_in = False
         self.subscribed = False  # indicates if API sent subscriptions to all data
-        self.stop = False
+        self.to_stop = False
 
         # symbols to use, make sure we have really a set of tuples
         self.mkt_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in mkt_symbols])
@@ -84,7 +85,7 @@ class PhxApi(ApiInterface, abc.ABC):
         self.default_exchange = exchange
         self.position_report_counter: Dict[Tuple[str, str], int] = dict()
 
-        # state variables to determine readiness for trading and stopping trading
+        # state variables used by algo to determine readiness for starting and stopping trading
         self.dependency_actions = PhxApi.get_init_dependency_actions()
 
         # set from configuration
@@ -119,7 +120,7 @@ class PhxApi(ApiInterface, abc.ABC):
 
         # collecting the reports of a mass status requests
         self.mass_status_exec_reports = []
-        self.start_timers()
+        self.start_threads()
 
     @staticmethod
     def get_init_dependency_actions() -> dict:
@@ -132,9 +133,8 @@ class PhxApi(ApiInterface, abc.ABC):
         }
 
     def run(self):
-        if self.check_if_can_start():
-            self.app_runner.start()
-            self.dispatch()
+        self.app_runner.start()
+        self.dispatch()
 
     def dispatch(self):
         while not self.is_finished():
@@ -182,8 +182,6 @@ class PhxApi(ApiInterface, abc.ABC):
                     self.on_create(msg)
                 else:
                     self.logger.info(f"unknown message {msg}")
-
-                self.exec_state_evaluation()
             except queue.Empty:
                 self.exception = TimeoutError(
                     f"queue empty after waiting {self.queue_timeout.total_seconds()}s"
@@ -196,27 +194,34 @@ class PhxApi(ApiInterface, abc.ABC):
                 self.logger.exception(
                     f"dispatch: exception {e}"
                 )
+            finally:
+                self.exec_state_evaluation()
         self.logger.info("dispatch loop terminated")
         try:
-            self.stop_timers()
+            self.stop_threads()
             self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
         except Exception as e:
             self.logger.exception(f"failed to save fix message history: {e}")
 
     def exec_state_evaluation(self):
         fn = "exec_state_evaluation"
-        if self.stop and not self.is_stopped():
-            self.logger.info(f"{fn}: {self.stop=} and {self.is_stopped()=}. Stopping...")
-            self.stopping()
-        elif self.is_stopped() and not self.is_finished():
-            self.logger.info(f"{fn}: {self.is_stopped()=} and {self.is_finished()=}. Stop app_runner...")
-            self.app_runner.stop()
+        if self.to_stop and not self.is_ready_to_disconnect():
+            # algo set to_stop=True but still open orders
+            self.logger.info(f"{fn}: {self.to_stop=} and {self.is_ready_to_disconnect()=}. Stopping...")
+            self.stop_api()
+        elif self.is_ready_to_disconnect() and not self.is_finished():
+            self.logger.info(
+                f"{fn}: {self.is_ready_to_disconnect()=} and "
+                f"{self.is_finished()=} and {self.app_runner.is_fix_session_up=}."
+            )
+            if self.app_runner.is_fix_session_up:
+                self.logger.info("Stop app_runner...")
+                self.app_runner.stop()
+            else:
+                self.logger.info("Wait for app_runner to stop...")
         elif self.logged_in and not self.subscribed:
             self.logger.info(f"{fn}: {self.logged_in=} and {self.subscribed:=}. Subscribe...")
             self.subscribe()
-
-    def check_if_can_start(self) -> bool:
-        return not self.stop
 
     def subscribe(self):
         self.request_security_data()
@@ -229,63 +234,30 @@ class PhxApi(ApiInterface, abc.ABC):
             self.subscribe_trade_capture_reports()
         self.subscribed = True
 
-    def is_ready_to_trade(self) -> bool:
-        fn = "is_ready_to_trade"
-        started = True
-        for ticker in self.trading_symbols:
-            if ticker not in self.dependency_actions.get(DependencyAction.ORDERBOOK_SNAPSHOTS):
-                started = False
-                self.logger.info(
-                    f"{fn} {ticker=} not in ORDERBOOK_SNAPSHOTS "
-                    f"{self.dependency_actions.get(DependencyAction.ORDERBOOK_SNAPSHOTS)}"
-                )
-                break
-            if ticker not in self.dependency_actions.get(DependencyAction.WORKING_ORDERS, []):
-                started = False
-                self.logger.info(
-                    f"{fn} {ticker=} not in WORKING_ORDERS "
-                    f"{self.dependency_actions.get(DependencyAction.WORKING_ORDERS)}"
-                )
-                break
-
-        if started:
-            if self.default_exchange not in self.dependency_actions.get(DependencyAction.SECURITY_REPORTS):
-                started = False
-                self.logger.info(
-                    f"{fn} {self.default_exchange=} not in SECURITY_REPORTS "
-                    f"{self.dependency_actions.get(DependencyAction.SECURITY_REPORTS)}"
-                )
-            elif self.default_exchange not in self.dependency_actions.get(DependencyAction.POSITION_SNAPSHOTS):
-                started = False
-                self.logger.info(
-                    f"{fn} {self.default_exchange=} not in POSITION_SNAPSHOTS "
-                    f"{self.dependency_actions.get(DependencyAction.POSITION_SNAPSHOTS)}"
-                )
-        return started
-
     def cancel_all_order(self):
         for (ord_id, order) in self.order_tracker.open_orders.items():
             msg = self.fix_interface.order_cancel_request(order)
             self.logger.info(f"order cancel request {fix_message_string(msg)}")
 
-    def stopping(self):
+    def stop_api(self):
+        fn = sys._getframe().f_code.co_name
         if self.logged_in and self.cancel_orders_on_exit:
-            self.logger.info(f"cancelling orders on exit")
+            self.logger.info(f"{fn} cancelling orders on exit")
             if self.use_mass_cancel_request:
                 for (exchange, symbol) in self.trading_symbols:
                     msg = self.fix_interface.order_mass_cancel_request(exchange, symbol)
-                    self.logger.info(f"order mass cancel request {fix_message_string(msg)}")
+                    self.logger.info(f"{fn} order mass cancel request {msg}")
             else:
                 for (ord_id, order) in self.order_tracker.open_orders.items():
-                    msg = self.fix_interface.order_cancel_request(order)
-                    self.logger.info(f"order cancel request {fix_message_string(msg)}")
+                    order, msg = self.fix_interface.order_cancel_request(order)
+                    self.logger.info(f"{fn} order cancel request {fix_message_string(msg)}")
         else:
-            self.logger.info(f"keep orders alive on exit")
+            self.logger.info(f"{fn} keep orders alive on exit")
 
-    def is_stopped(self) -> bool:
-        # returns True if API stop flag is True and no open orders
-        # means API can log out now
-        return self.stop and (
+    def is_ready_to_disconnect(self) -> bool:
+        # returns True if API to_stop flag is True and no open orders
+        # means API can disconnect now
+        return self.to_stop and (
             not self.cancel_orders_on_exit or
             not self.order_tracker.open_orders
         )
@@ -293,7 +265,7 @@ class PhxApi(ApiInterface, abc.ABC):
     def is_finished(self) -> bool:
         # returns True if API stopped, cancelled open orders and logged out
         # means algo can exit now
-        return self.is_stopped() and not self.logged_in
+        return self.is_ready_to_disconnect() and not self.logged_in
 
     def request_security_data(self):
         self.logger.info(f"====> requesting security list...")
@@ -323,7 +295,7 @@ class PhxApi(ApiInterface, abc.ABC):
                 mass_status_req_id=f"ms_{self.fix_interface.generate_msg_id()}",
                 mass_status_req_type=fix.MassStatusReqType_STATUS_FOR_ALL_ORDERS
             )
-            self.logger.debug(f"{fix_message_string(msg)}")
+            self.logger.info(f"{fix_message_string(msg)}")
 
     def request_position_snapshot(self):
         # note that the same account alias has to be used for all the connected exchanges
@@ -360,15 +332,15 @@ class PhxApi(ApiInterface, abc.ABC):
         )
         self.logger.debug(f"{fix_message_string(msg)}")
 
-    def start_timers(self):
-        self.logger.info(f"start_timers...")
+    def start_threads(self):
+        self.logger.info(f"start_threads...")
         self.recurring_timer.start()
         self.run_thread.start()
         self.timers_started = True
 
-    def stop_timers(self):
+    def stop_threads(self):
         if self.timers_started:
-            self.logger.info(f"stopping timers...")
+            self.logger.info(f"stopping threads...")
             if self.recurring_timer.is_alive():
                 self.recurring_timer.cancel()
                 self.recurring_timer.join()
@@ -480,8 +452,8 @@ class PhxApi(ApiInterface, abc.ABC):
         else:
             num_open_orders_before = len(self.order_tracker.open_orders)
             self.order_tracker.process(msg, utcnow())
-
-            if self.stop and num_open_orders_before and not self.order_tracker.open_orders:
+            # if we canceled all open orders -> store the fix message history
+            if self.to_stop and num_open_orders_before and not self.order_tracker.open_orders:
                 self.logger.info(f"<==== all open orders cancelled")
                 self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
                 self.logger.info(f"<==== FIX message history saved")

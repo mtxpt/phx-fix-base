@@ -1,14 +1,17 @@
 import abc
 from enum import IntEnum
-import pandas as pd
-from typing import Union, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
-from phx.fix.model import Logon, Create, Logout, Heartbeat
-from phx.fix.model import OrderBookSnapshot, OrderBookUpdate, Trades
-from phx.fix.model import ExecReport, PositionReports, SecurityReport, TradeCaptureReport
-from phx.fix.model import GatewayNotReady, NotConnected, Reject, BusinessMessageReject, MarketDataRequestReject
-from phx.fix.model import PositionRequestAck, TradeCaptureReportRequestAck
-from phx.fix.model import OrderMassCancelReport, MassStatusExecReport, MassStatusExecReportNoOrders
+import pandas as pd
+from phx.fix.model import (BusinessMessageReject, Create, ExecReport,
+                           GatewayNotReady, Heartbeat, Logon, Logout,
+                           MarketDataRequestReject, MassStatusExecReport,
+                           MassStatusExecReportNoOrders, NotConnected,
+                           OrderBookSnapshot, OrderBookUpdate,
+                           OrderMassCancelReport, PositionReports,
+                           PositionRequestAck, Reject, SecurityReport,
+                           TradeCaptureReport, TradeCaptureReportRequestAck,
+                           Trades)
 
 
 class ApiInterface(abc.ABC):
@@ -26,21 +29,16 @@ class ApiInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def check_if_can_start(self):
-        pass
-
-    @abc.abstractmethod
     def subscribe(self):
         pass
 
     @abc.abstractmethod
-    def stopping(self):
+    def stop_api(self):
         pass
 
     @abc.abstractmethod
-    def is_stopped(self) -> bool:
+    def is_ready_to_disconnect(self) -> bool:
         pass
-
 
     @abc.abstractmethod
     def request_security_data(self):
@@ -67,11 +65,11 @@ class ApiInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def start_timers(self):
+    def start_threads(self):
         pass
 
     @abc.abstractmethod
-    def stop_timers(self):
+    def stop_threads(self):
         pass
 
     @abc.abstractmethod

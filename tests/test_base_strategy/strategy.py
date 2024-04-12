@@ -1,17 +1,14 @@
 import time
 from enum import Enum
 from logging import Logger
-# from typing import Tuple, Optional, Set
 
 import pandas as pd
 import quickfix as fix
+from phx.api import PhxApi, DependencyAction
 from phx.fix.app import AppRunner
 from phx.fix.utils import fix_message_string, flip_trading_dir
 from phx.utils import TO_PIPS
-
-from phx.api import PhxApi
 from phx.utils.price_utils import price_round_down, price_round_up
-
 from phx.utils.time import utcnow
 
 
@@ -29,7 +26,7 @@ class DeribitTestStrategy:
     ):
         self.logger = logger
         self.exchange = "deribit"
-        self.trading_symbols = ["BTC-PERPETUAL", "ETH-PERPETUAL"]
+        self.trading_symbols = ["ETH-PERPETUAL", "BTC-PERPETUAL"]
         self.phx_api = PhxApi(
             app_runner=app_runner,
             config=config,
@@ -42,7 +39,7 @@ class DeribitTestStrategy:
         self.start_time = utcnow()
         self.timeout = pd.Timedelta(config.get("timeout", "00:00:30"))
         self.last_trade_time = pd.Timestamp(0, tz="UTC")
-        self.trade_interval = pd.Timedelta(config.get("trade_interval", "10s"))
+        self.trade_interval = pd.Timedelta(config.get("trade_interval", "5s"))
         # order settings
         self.quantity = config["quantity"]
         self.trading_mode = TradingMode.AGGRESSIVE_LIMIT_ORDERS
@@ -62,17 +59,52 @@ class DeribitTestStrategy:
         )
         return completed
 
+    def is_ready_to_trade(self) -> bool:
+        """
+        Example of a function that checks that API received all data
+        necessary to trade.
+        Returns
+        -------
+        True if all data received and algo ready to trade,
+        False otherwise
+        """
+        fn = "is_ready_to_trade"
+        is_ready = True
+        # check that per-symbol data (ob snapshot and working orders) is ready
+        for symbol in self.trading_symbols:
+            ticker = (self.exchange, symbol)
+            for action in [DependencyAction.ORDERBOOK_SNAPSHOTS, DependencyAction.WORKING_ORDERS]:
+                if ticker not in self.phx_api.dependency_actions.get(action):
+                    is_ready = False
+                    self.logger.info(
+                        f"{fn} {ticker=} not in {action=} "
+                        f"{self.phx_api.dependency_actions.get(action)}"
+                    )
+        # check that per-exchange data (securities and positions) is ready
+        for action in [DependencyAction.SECURITY_REPORTS, DependencyAction.POSITION_SNAPSHOTS]:
+            if self.exchange not in self.phx_api.dependency_actions.get(action):
+                is_ready = False
+                self.logger.info(
+                    f"{fn} {self.exchange=} not in {action=} "
+                    f"{self.phx_api.dependency_actions.get(action)}"
+                )
+        if is_ready:
+            self.logger.info(
+                f"{fn} {self.exchange=} {self.trading_symbols=} READY TO TRADE"
+            )
+        return is_ready
+
     def strategy_loop(self):
         fn = "strategy_loop"
         api_finished = False
         try:
             while not api_finished:
-                if not self.phx_api.stop:
-                    if self.phx_api.is_ready_to_trade():
+                if not self.phx_api.to_stop:
+                    if self.is_ready_to_trade():
                         self.trade()
                     time_is_out = self.check_if_completed()
                     if time_is_out:
-                        self.phx_api.stop = True
+                        self.phx_api.to_stop = True
                 else:
                     self.logger.info(f"{fn}: API Stopped. Waiting to be finished...")
                 self.logger.info(f"{fn}: sleep for {self.trade_interval.total_seconds()} seconds")
@@ -82,7 +114,7 @@ class DeribitTestStrategy:
                     self.logger.info(f"{fn}: API finished.")
         except Exception as e:
             self.logger.error(f"{fn}: Exception: {e}")
-            self.phx_api.stop = True
+            self.phx_api.to_stop = True
 
     def get_trading_direction(self):
         direction = self.current_trading_direction

@@ -1,13 +1,13 @@
-import argparse
 import logging
 import queue
-import yaml
 from datetime import datetime
 from pathlib import Path
 
-from phx.utils import setup_logger, set_file_loging_handler, make_dirs
+import yaml
 from phx.fix.app import App, AppRunner, FixSessionConfig
 from phx.fix.model.auth import FixAuthenticationMethod
+from phx.utils import make_dirs, set_file_loging_handler, setup_logger
+
 from strategy import DeribitTestStrategy
 
 
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     make_dirs(export_dir)
     LOG_TIMESTAMP = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     logger = set_file_loging_handler(
-        setup_logger("fix_service", level=logging.DEBUG),
+        setup_logger("fix_service", level=logging.INFO),
         export_dir / f"test_base_strategy_{LOG_TIMESTAMP}.log"
     )
     message_queue = queue.Queue()
@@ -44,7 +44,6 @@ if __name__ == "__main__":
         fix_schema_dict=fix_schema_file()
     )
     fix_session_settings = fix_configs.get_fix_session_settings()
-
     app = App(message_queue, fix_session_settings, logger, export_dir)
     app_runner = AppRunner(app, fix_session_settings, fix_configs.get_session_id(), logger)
 

@@ -5,7 +5,7 @@
   "trade_interval": "00:00:10.000",
 
   # cancel on exit
-  "cancel_orders_on_exit": False,
+  "cancel_orders_on_exit": True,
   "cancel_timeout_seconds": 5,
   "save_before_cancel_orders_on_exit": False,
 
