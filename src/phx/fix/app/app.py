@@ -35,7 +35,6 @@ from phx.utils import make_dirs_for_file
 from phx.utils.utils import str_to_datetime
 from phx.fix.app.config import FixAuthenticationMethod
 
-
 REJECT_TEXT_GATEWAY_NOT_READY = "GATEWAY_NOT_READY"
 
 REJECT_TEXT_NOT_CONNECTED = "NOT CONNECTED"
@@ -98,7 +97,9 @@ class App(fix.Application, FixInterface):
             self.message_queue.put(Create(session_id.toString()), block=False)
             self.connected = True
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(f"session : {self.session_id} , exception in [onCreate] callback , might related to "
+                              f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
 
     def onLogon(self, session_id: fix.SessionID):
         try:
@@ -115,7 +116,10 @@ class App(fix.Application, FixInterface):
             self.message_queue.put(Logout(session_id.toString()), block=False)
             self._reset_session_states()
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(f"session : {self.session_id} , exception in [onLogout] callback , might related to "
+                              f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
+
         finally:
             self._reset_session_states()
 
@@ -125,7 +129,7 @@ class App(fix.Application, FixInterface):
         result_str = ''.join(random.choice(letters) for i in range(length))
         return result_str
 
-    def toAdmin(self, message: fix.Message , session_id: fix.SessionID):
+    def toAdmin(self, message: fix.Message, session_id: fix.SessionID):
         try:
             msg = fix_message_string(message)
             self.sent_admin_message_history.append(msg)
@@ -184,7 +188,9 @@ class App(fix.Application, FixInterface):
                 self.logger.error(f"[toAdmin] {session_id} unhandled message | {msg}")
             self.logger.debug(f"[toAdmin] {session_id} | {msg} ")
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(f"session : {self.session_id} , exception in [toAdmin] callback , might related to "
+                              f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
 
     def fromAdmin(self, message: fix.Message, session_id: fix.SessionID):
         try:
@@ -203,7 +209,9 @@ class App(fix.Application, FixInterface):
             elif msg_type.getValue() == fix.MsgType_Heartbeat:
                 pass
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(f"session : {self.session_id} , exception in [fromAdmin] callback , might related to "
+                              f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
 
     def toApp(self, message: fix.Message, session_id: fix.SessionID):
         try:
@@ -211,7 +219,9 @@ class App(fix.Application, FixInterface):
             self.sent_app_message_history.append(msg)
             self.logger.debug(f"[toApp] {session_id} | {msg}")
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(f"session : {self.session_id} , exception in [toApp] callback , might related to "
+                              f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
 
     def fromApp(self, message: fix.Message, session_id: fix.SessionID):
         try:
@@ -255,21 +265,29 @@ class App(fix.Application, FixInterface):
                     f"| {fix_message_string(message)}"
                 )
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(f"session : {self.session_id} , exception in [fromApp] callback , might related to "
+                              f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
 
     def send_message_to_session(self, message: fix.Message):
         try:
             self.logger.info(f'session_id {self.session_id} : send quick fix message {fix_message_string(message)}')
             fix.Session.sendToTarget(message, self.session_id)
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(
+                f"session : {self.session_id} , exception in [send_message_to_session] function , might related to "
+                f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
 
     def send_raw_message_to_session(self, message: bytes):
         try:
             self.logger.info(f'session_id {self.session_id} : send raw message in bytes {str(message)}')
             fix.Session.sendToTarget(message, self.session_id)
         except Exception as error:
-            self.logger.error(f"exception under c++ engine : {error}")
+            self.logger.error(
+                f"session : {self.session_id} , exception in [send_raw_message_to_session] function , might related to "
+                f"underlying c++ quickfix engine")
+            self.logger.error(error, exc_info=True)
 
     def on_request_for_position_ack(self, message, session_id, sending_time):
         """
