@@ -1,8 +1,7 @@
 import time
 from datetime import datetime, timedelta
-from threading import Thread, Event
-from typing import Callable, Any
-from typing import Union
+from threading import Event, Thread
+from typing import Any, Callable, Union
 
 import pandas as pd
 

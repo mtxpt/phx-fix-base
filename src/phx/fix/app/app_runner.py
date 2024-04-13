@@ -20,6 +20,7 @@ class AppRunner(object):
         self.store_factory = fix.FileStoreFactory(session_settings)
         self.log_factory = fix.FileLogFactory(session_settings)
         self.initiator = None
+        self.is_fix_session_up = False
 
     def roll_session_settings(self):
         start_time = self.session_settings.get().getString("StartTime")
@@ -33,6 +34,7 @@ class AppRunner(object):
         try:
             self.initiator = fix.SocketInitiator(self.app, self.store_factory, self.session_settings, self.log_factory)
             self.initiator.start()
+            self.is_fix_session_up = True
         except Exception as e:
             self.logger.error(f"AppRunner.start: exception {e}")
 
@@ -40,5 +42,6 @@ class AppRunner(object):
         try:
             if self.initiator is not None:
                 self.initiator.stop()
+                self.is_fix_session_up = False
         except Exception as e:
             self.logger.error(f"AppRunner.stop: exception {e}")

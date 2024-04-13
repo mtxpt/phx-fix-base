@@ -15,7 +15,7 @@ The project requires
   - Dependencies as listed in `requirements.txt`
 
 
-## Installation 
+## Developer Installation 
 
 It is highly recommended to create a new Python environment.
 
@@ -90,8 +90,20 @@ Lower right corner in PyCharm choose "Python Interpreter". Then
 PyCharm can also be configured for Remote Development. This allows to run the project on the server,
 while using PyCharm client.
 
+## User Installation
+1. Download `phx-fix-base` project with
+```bash
+% git clone git@github.com:mtxpt/phx-fix-base.git
+```
+2. Install `phx-fix-base` library in your environment of choice by
+```bash
+% pip install git+file:///<path to installed phx-fix-base project>
+```
+for example: `pip install git+file:///Users/user/phoenix/phx-fix-base`
+3. import `phx-fix-base` modules into your code and use them. For example see: 
+`<phx-fix-base>/tests/test_base_strategy`
 
-
+## Developer Notes
 
 
 

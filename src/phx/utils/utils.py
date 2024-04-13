@@ -1,6 +1,6 @@
 import operator as op
 from datetime import datetime
-from typing import Optional, Any
+from typing import Any, Optional
 
 
 def float_to_string(value: float, digits=2) -> str:

@@ -6,9 +6,8 @@
 
   # cancel on exit
   "cancel_orders_on_exit": True,
-  "use_mass_cancel_request": True,
   "cancel_timeout_seconds": 5,
-  "save_before_cancel_orders_on_exit": True,
+  "save_before_cancel_orders_on_exit": False,
 
   # error handing on gateway not ready
   "cancel_on_gateway_not_ready": True,

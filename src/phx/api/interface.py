@@ -1,37 +1,20 @@
 import abc
 from enum import IntEnum
+from typing import Optional, Tuple, Union
+
 import pandas as pd
-from typing import Union, Optional, Tuple, Union
-
-from phx.fix.model import Logon, Create, Logout, Heartbeat
-from phx.fix.model import OrderBookSnapshot, OrderBookUpdate, Trades
-from phx.fix.model import ExecReport, PositionReports, SecurityReport, TradeCaptureReport
-from phx.fix.model import GatewayNotReady, NotConnected, Reject, BusinessMessageReject, MarketDataRequestReject
-from phx.fix.model import PositionRequestAck, TradeCaptureReportRequestAck
-from phx.fix.model import OrderMassCancelReport, MassStatusExecReport, MassStatusExecReportNoOrders
-
-
-class StrategyExecState(IntEnum):
-    STOPPED = 0
-    LOGGING_IN = 1
-    LOGGED_IN = 2
-    STARTING = 3
-    STARTED = 4
-    STOPPING = 5
-    LOGGED_OUT = 6
-    FINISHED = 7
+from phx.fix.model import (BusinessMessageReject, Create, ExecReport,
+                           GatewayNotReady, Heartbeat, Logon, Logout,
+                           MarketDataRequestReject, MassStatusExecReport,
+                           MassStatusExecReportNoOrders, NotConnected,
+                           OrderBookSnapshot, OrderBookUpdate,
+                           OrderMassCancelReport, PositionReports,
+                           PositionRequestAck, Reject, SecurityReport,
+                           TradeCaptureReport, TradeCaptureReportRequestAck,
+                           Trades)
 
 
-class RoundingDirection(IntEnum):
-    UP = 0
-    DOWN = 1
-
-
-class StrategyInterface(abc.ABC):
-
-    @abc.abstractmethod
-    def trade(self):
-        pass
+class ApiInterface(abc.ABC):
 
     @abc.abstractmethod
     def run(self) -> bool:
@@ -46,27 +29,15 @@ class StrategyInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def check_if_can_start(self):
+    def subscribe(self):
         pass
 
     @abc.abstractmethod
-    def starting(self):
+    def stop_api(self):
         pass
 
     @abc.abstractmethod
-    def check_if_started(self) -> bool:
-        pass
-
-    @abc.abstractmethod
-    def stopping(self):
-        pass
-
-    @abc.abstractmethod
-    def check_if_stopped(self) -> bool:
-        pass
-
-    @abc.abstractmethod
-    def check_if_completed(self) -> bool:
+    def is_ready_to_disconnect(self) -> bool:
         pass
 
     @abc.abstractmethod
@@ -94,15 +65,11 @@ class StrategyInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def now(self) -> pd.Timestamp:
+    def start_threads(self):
         pass
 
     @abc.abstractmethod
-    def start_timers(self):
-        pass
-
-    @abc.abstractmethod
-    def stop_timers(self):
+    def stop_threads(self):
         pass
 
     @abc.abstractmethod
@@ -193,21 +160,21 @@ class StrategyInterface(abc.ABC):
     def on_trades(self, msg: Trades):
         pass
 
-    @abc.abstractmethod
-    def round(
-            self,
-            price: float,
-            direction: RoundingDirection,
-            ticker: Tuple[str, str],
-            min_tick_size=None
-    ) -> Optional[float]:
-        pass
-
-    @abc.abstractmethod
-    def tick_round(
-            self,
-            price,
-            ticker: Tuple[str, str],
-            min_tick_size=None
-    ) -> float:
-        pass
+    # @abc.abstractmethod
+    # def round(
+    #         self,
+    #         price: float,
+    #         direction: RoundingDirection,
+    #         ticker: Tuple[str, str],
+    #         min_tick_size=None
+    # ) -> Optional[float]:
+    #     pass
+    #
+    # @abc.abstractmethod
+    # def tick_round(
+    #         self,
+    #         price,
+    #         ticker: Tuple[str, str],
+    #         min_tick_size=None
+    # ) -> float:
+    #     pass
