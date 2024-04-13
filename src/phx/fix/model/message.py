@@ -158,6 +158,26 @@ class Reject(Message):
                 f"]")
 
 
+class OrderCancelReject(Message):
+    def __init__(self, ord_id: str, cl_ord_id, orig_cl_ord_id, reason, text):
+        super().__init__()
+        self.ord_id = ord_id
+        self.cl_ord_id = cl_ord_id
+        self.orig_cl_ord_id = orig_cl_ord_id
+        self.reason = reason
+        self.text = text
+
+    def __str__(self):
+        return (
+            "OrderCancelReject["
+            f"ord_id={self.ord_id}, "
+            f"cl_ord_id={self.cl_ord_id}, "
+            f"orig_cl_ord_id={self.orig_cl_ord_id}, "
+            f"reason='{self.reason}', "
+            f"text='{self.text}'"
+            "]"
+        )
+
 class MarketDataRequestReject(Message):
 
     def __init__(self, reason, text):

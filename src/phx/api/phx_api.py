@@ -1,7 +1,9 @@
 import abc
 import queue
 import sys
+import time
 import threading
+from datetime import timedelta
 from enum import Enum
 from logging import Logger
 from typing import Any, List, Set, Dict, Tuple, Union, Optional
@@ -11,7 +13,7 @@ import quickfix as fix
 from phx.fix.app.interface import FixInterface
 from phx.fix.app.app_runner import AppRunner
 from phx.fix.model import ExecReport, PositionReports, Security, SecurityReport, TradeCaptureReport
-from phx.fix.model import Reject, BusinessMessageReject, MarketDataRequestReject
+from phx.fix.model import Reject, OrderCancelReject, BusinessMessageReject, MarketDataRequestReject
 from phx.fix.model import Logon, Create, Logout, Heartbeat, NotConnected, GatewayNotReady
 from phx.fix.model import Order, OrderBookSnapshot, OrderBookUpdate, Trades
 from phx.fix.model import OrderMassCancelReport, MassStatusExecReport, MassStatusExecReportNoOrders
@@ -19,9 +21,10 @@ from phx.fix.model import PositionRequestAck, TradeCaptureReportRequestAck
 from phx.fix.model.order_book import OrderBook
 from phx.fix.tracker import OrderTracker, PositionTracker
 from phx.fix.utils import fix_message_string
+from phx.utils.limiter import MultiPeriodLimiter
 from phx.utils.thread import AlignedRepeatingTimer
 from phx.utils import CHECK_MARK, CROSS_MARK, fn
-from phx.utils.time import utcnow
+from phx.utils.time import utcnow, dt_now_utc
 
 # from phx.utils.price_utils import RoundingDirection, price_round, price_round_down, price_round_up
 
@@ -68,12 +71,12 @@ class PhxApi(ApiInterface, abc.ABC):
             trading_symbols: List[str],
             logger: Logger = None,
     ):
+        self.logger: Logger = logger if logger is not None else app_runner.logger
         config = config or {}
         self.app_runner = app_runner
         self.fix_interface: FixInterface = app_runner.app
         self.message_queue: queue.Queue = app_runner.app.message_queue
         self.config: dict = config
-        self.logger: Logger = logger if logger is not None else app_runner.logger
         self.queue_timeout = pd.Timedelta(config.get("queue_timeout", "00:00:10"))
         self.logged_in = False
         self.subscribed = False  # indicates if API sent subscriptions to all data
@@ -84,10 +87,12 @@ class PhxApi(ApiInterface, abc.ABC):
         self.trading_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in trading_symbols])
         self.default_exchange = exchange
         self.position_report_counter: Dict[Tuple[str, str], int] = dict()
-
+        # Rate Limiter setup
+        rate_limit_config = config.get("rate_limit_for_period", [(1, "1s")])
+        self.rate_limiter = MultiPeriodLimiter(rate_limit_config, self.logger)
+        self.logger.info(f"PhxApi Rate Limits:\n{self.rate_limiter}")
         # state variables used by algo to determine readiness for starting and stopping trading
         self.dependency_actions = PhxApi.get_init_dependency_actions()
-
         # set from configuration
         self.subscribe_for_position_updates = config.get("subscribe_for_position_updates", True)
         self.subscribe_for_trade_capture_reports = config.get("subscribe_for_trade_capture_reports", True)
@@ -162,6 +167,8 @@ class PhxApi(ApiInterface, abc.ABC):
                     self.on_business_message_reject(msg)
                 elif isinstance(msg, MarketDataRequestReject):
                     self.on_market_data_request_reject(msg)
+                elif isinstance(msg, OrderCancelReject):
+                    self.on_order_cancel_reject(msg)
                 elif isinstance(msg, OrderBookSnapshot):
                     self.on_order_book_snapshot(msg)
                 elif isinstance(msg, SecurityReport):
@@ -234,23 +241,33 @@ class PhxApi(ApiInterface, abc.ABC):
             self.subscribe_trade_capture_reports()
         self.subscribed = True
 
-    def cancel_all_order(self):
-        for (ord_id, order) in self.order_tracker.open_orders.items():
-            msg = self.fix_interface.order_cancel_request(order)
-            self.logger.info(f"order cancel request {fix_message_string(msg)}")
-
-    def stop_api(self):
+    def stop_api(self) -> None:
         fn = sys._getframe().f_code.co_name
+        max_process_time_secs = 10
         if self.logged_in and self.cancel_orders_on_exit:
-            self.logger.info(f"{fn} cancelling orders on exit")
+            self.logger.info(
+                f"{fn} cancelling {len(self.order_tracker.open_orders)} orders on exit")
             if self.use_mass_cancel_request:
                 for (exchange, symbol) in self.trading_symbols:
-                    msg = self.fix_interface.order_mass_cancel_request(exchange, symbol)
-                    self.logger.info(f"{fn} order mass cancel request {msg}")
+                    if self.rate_limiter.has_capacity(dt_now_utc(), 1):
+                        self.rate_limiter.consume(dt_now_utc())
+                        msg = self.fix_interface.order_mass_cancel_request(exchange, symbol)
+                        self.logger.info(f"{fn} order mass cancel request {msg}")
+                    else:
+                        self.logger.info(
+                            f"{fn} no rate limit capacity. Try again later."
+                        )
             else:
                 for (ord_id, order) in self.order_tracker.open_orders.items():
-                    order, msg = self.fix_interface.order_cancel_request(order)
-                    self.logger.info(f"{fn} order cancel request {fix_message_string(msg)}")
+                    if self.rate_limiter.has_capacity(dt_now_utc(), 1):
+                        self.rate_limiter.consume(dt_now_utc())
+                        order, msg = self.fix_interface.order_cancel_request(order)
+                        self.logger.info(f"{fn} order cancel request {fix_message_string(msg)}")
+                    else:
+                        self.logger.info(
+                            f"{fn} no rate limit capacity. Try again later."
+                        )
+                        break
         else:
             self.logger.info(f"{fn} keep orders alive on exit")
 
@@ -390,6 +407,18 @@ class PhxApi(ApiInterface, abc.ABC):
     def on_market_data_request_reject(self, msg: MarketDataRequestReject):
         self.logger.error(f"on_market_data_request_reject: {msg}")
 
+    def on_order_cancel_reject(self, msg: OrderCancelReject):
+        fn = "on_order_cancel_reject"
+        self.logger.info(f"{fn} {str(msg)=}")
+        if (
+            "not_found" in msg.text
+            or "NOT FOUND" in msg.text
+            or "Too late to cancel" in msg.reason
+        ):
+            self.logger.warning(f"{fn} Order Cancel Rejected with {msg=}. Remove order.")
+            success = self.order_tracker.remove_order(msg.ord_id, msg.orig_cl_ord_id)
+            self.logger.info(f"{fn} remove order results:{success}")
+
     def on_security_report(self, msg: SecurityReport):
         exchanges = set([security.exchange for security in msg.securities.values()])
         for security in msg.securities.values():
@@ -436,11 +465,19 @@ class PhxApi(ApiInterface, abc.ABC):
             )
 
     def on_exec_report(self, msg: ExecReport):
+        fn = "on_exec_report"
+        self.logger.info(
+            f"{fn} msg:\n{msg}"
+        )
         if msg.exec_type == "I":
             if msg.ord_status == fix.OrdStatus_REJECTED:
                 self.on_mass_status_exec_report(MassStatusExecReportNoOrders(msg.exchange, msg.symbol, msg.text))
             elif msg.is_mass_status:
-                assert msg.tot_num_reports is not None
+                if msg.tot_num_reports is None:
+                    self.logger.error(
+                        f"{fn} invalid tot_num_reports in {msg=}"
+                    )
+                    return
                 self.mass_status_exec_reports.append(msg)
                 if len(self.mass_status_exec_reports) == msg.tot_num_reports and msg.last_rpt_requested:
                     self.on_mass_status_exec_report(MassStatusExecReport(self.mass_status_exec_reports))
@@ -454,9 +491,9 @@ class PhxApi(ApiInterface, abc.ABC):
             self.order_tracker.process(msg, utcnow())
             # if we canceled all open orders -> store the fix message history
             if self.to_stop and num_open_orders_before and not self.order_tracker.open_orders:
-                self.logger.info(f"<==== all open orders cancelled")
+                self.logger.info(f"{fn} <==== all open orders cancelled")
                 self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
-                self.logger.info(f"<==== FIX message history saved")
+                self.logger.info(f"{fn} <==== FIX message history saved")
 
     def on_status_exec_report(self, msg: ExecReport):
         if self.print_reports:
@@ -481,7 +518,7 @@ class PhxApi(ApiInterface, abc.ABC):
                 f"\nhistorical orders:"
                 f"\n{Order.tabulate(self.order_tracker.history_orders)}"
             )
-            for ticker in msg.keys():
+            for ticker in self.trading_symbols:
                 if ticker not in self.dependency_actions[DependencyAction.WORKING_ORDERS]:
                     self.dependency_actions[DependencyAction.WORKING_ORDERS].append(ticker)
         elif isinstance(msg, MassStatusExecReportNoOrders):
@@ -508,7 +545,7 @@ class PhxApi(ApiInterface, abc.ABC):
 
     def on_order_book_snapshot(self, msg: OrderBookSnapshot):
         ticker = msg.key()
-        self.logger.info(f"on_order_book_snapshot: {ticker}")
+        self.logger.info(f"on_order_book_snapshot: {ticker} \n{str(msg)}")
         if ticker not in self.dependency_actions[DependencyAction.ORDERBOOK_SNAPSHOTS]:
             self.dependency_actions[DependencyAction.ORDERBOOK_SNAPSHOTS].append(ticker)
         self.order_books[ticker] = OrderBook(
@@ -516,6 +553,10 @@ class PhxApi(ApiInterface, abc.ABC):
         )
 
     def on_order_book_update(self, msg: OrderBookUpdate):
+        self.logger.debug(
+            f"on_order_book_update: ticker:{msg.key()}"
+            f" updates:{msg.updates}"
+        )
         book = self.order_books.get(msg.key(), None)
         if book is not None:
             for price, quantity, is_bid in msg.updates:

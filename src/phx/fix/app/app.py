@@ -10,30 +10,36 @@ import string
 import time
 from datetime import datetime
 from logging import Logger
-from typing import List, Dict, Tuple, AnyStr
+from typing import AnyStr, Dict, List, Tuple
 
 import quickfix as fix
 import quickfix44 as fix44
-
+from phx.fix.app.config import FixAuthenticationMethod
 from phx.fix.app.interface import FixInterface
 from phx.fix.model.exec_report import ExecReport
-from phx.fix.model.message import Reject, BusinessMessageReject, MarketDataRequestReject, Message
-from phx.fix.model.message import Logon, Logout, Create, Heartbeat, GatewayNotReady, NotConnected
-from phx.fix.model.message import PositionRequestAck, TradeCaptureReportRequestAck, OrderMassCancelReport
+from phx.fix.model.message import (BusinessMessageReject, Create,
+                                   GatewayNotReady, Heartbeat, Logon, Logout,
+                                   MarketDataRequestReject, Message,
+                                   NotConnected, OrderCancelReject,
+                                   OrderMassCancelReport, PositionRequestAck,
+                                   Reject, TradeCaptureReportRequestAck)
 from phx.fix.model.order import Order
 from phx.fix.model.order_book import OrderBookSnapshot, OrderBookUpdate
-from phx.fix.model.position_report import Position, PositionReport, PositionReports
+from phx.fix.model.position_report import (Position, PositionReport,
+                                           PositionReports)
 from phx.fix.model.security import Security, SecurityReport
 from phx.fix.model.trade import Trade, Trades
-from phx.fix.model.trade_capture_report import TradeReport, TradeReportParty, TradeReportSide, TradeCaptureReport
-from phx.fix.utils import cxl_rej_response_to_to_string, cxl_rej_reason_to_string
-from phx.fix.utils import entry_type_to_str, msg_type_to_string
-from phx.fix.utils import fix_message_string, extract_message_field_value
-from phx.fix.utils import mass_cancel_reject_reason_to_string
-from phx.fix.utils import session_reject_reason_to_string, mass_cancel_request_type_to_string
+from phx.fix.model.trade_capture_report import (TradeCaptureReport,
+                                                TradeReport, TradeReportParty,
+                                                TradeReportSide)
+from phx.fix.utils import (cxl_rej_reason_to_string,
+                           cxl_rej_response_to_to_string, entry_type_to_str,
+                           extract_message_field_value, fix_message_string,
+                           mass_cancel_reject_reason_to_string,
+                           mass_cancel_request_type_to_string,
+                           msg_type_to_string, session_reject_reason_to_string)
 from phx.utils import make_dirs_for_file
 from phx.utils.utils import str_to_datetime
-from phx.fix.app.config import FixAuthenticationMethod
 
 REJECT_TEXT_GATEWAY_NOT_READY = "GATEWAY_NOT_READY"
 
@@ -481,7 +487,7 @@ class App(fix.Application, FixInterface):
         for i in range(group_size):
             message.getGroup(i + 1, group)
             entry_type = extract_message_field_value(fix.MDEntryType(), group, "")
-            update_action = extract_message_field_value(fix.MDUpdateAction(), group, "")
+            # update_action = extract_message_field_value(fix.MDUpdateAction(), group, "")
             exchange = extract_message_field_value(fix.SecurityExchange(), group, "str")
             symbol = extract_message_field_value(fix.Symbol(), group, "str")
             price = extract_message_field_value(fix.MDEntryPx(), group, "float")
@@ -680,17 +686,22 @@ class App(fix.Application, FixInterface):
         cxl_rej_response_to = extract_message_field_value(fix.CxlRejResponseTo(), message, "str")
         cxl_rej_reason = extract_message_field_value(fix.CxlRejReason(), message, "int")
         text = extract_message_field_value(fix.Text(), message, "str")
-        self.logger.error(
-            f"error order cancel reject: "
+        reason_str = cxl_rej_reason_to_string(cxl_rej_reason)
+        self.logger.warning(
+            f"order cancel reject: "
             f"ord_id {ord_id} "
             f"cl_ord_id {cl_ord_id} "
             f"orig_cl_ord_id {orig_cl_ord_id} "
-            f"{cxl_rej_response_to_to_string(cxl_rej_response_to)} "
-            f"{cxl_rej_reason_to_string(cxl_rej_reason)} "
-            f"{text} "
+            f"response_to:{cxl_rej_response_to_to_string(cxl_rej_response_to)} "
+            f"reason:{reason_str} "
+            f"text:{text} "
             f"| {fix_message_string(message)}"
         )
-        self.strategy.on_order_cancel_reject_completed(cxl_rej_reason, text)
+        self.message_queue.put(
+            OrderCancelReject(ord_id, cl_ord_id, orig_cl_ord_id, reason_str, text),
+            block=False,
+        )
+        # self.strategy.on_order_cancel_reject_completed(cxl_rej_reason, text)
 
     def generate_msg_id(self) -> AnyStr:
         self.msgID += 1

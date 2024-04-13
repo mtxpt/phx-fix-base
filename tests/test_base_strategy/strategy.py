@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timezone
 from enum import Enum
 from logging import Logger
 
@@ -8,6 +9,7 @@ from phx.api import PhxApi, DependencyAction
 from phx.fix.app import AppRunner
 from phx.fix.utils import fix_message_string, flip_trading_dir
 from phx.utils import TO_PIPS
+from phx.utils.limiter import MultiPeriodLimiter
 from phx.utils.price_utils import price_round_down, price_round_up
 from phx.utils.time import utcnow
 
@@ -37,7 +39,7 @@ class DeribitTestStrategy:
         )
         # time settings
         self.start_time = utcnow()
-        self.timeout = pd.Timedelta(config.get("timeout", "00:00:30"))
+        self.timeout = pd.Timedelta(config.get("timeout", "00:00:20"))
         self.last_trade_time = pd.Timestamp(0, tz="UTC")
         self.trade_interval = pd.Timedelta(config.get("trade_interval", "5s"))
         # order settings
@@ -88,6 +90,12 @@ class DeribitTestStrategy:
                     f"{fn} {self.exchange=} not in {action=} "
                     f"{self.phx_api.dependency_actions.get(action)}"
                 )
+        # Check rate limit
+        if self.phx_api.rate_limiter.free_capacity(datetime.now(timezone.utc)) == 0:
+            is_ready = False
+            self.logger.info(
+                f"{fn} {self.exchange=} no free rate limit capacity"
+            )
         if is_ready:
             self.logger.info(
                 f"{fn} {self.exchange=} {self.trading_symbols=} READY TO TRADE"
@@ -126,16 +134,37 @@ class DeribitTestStrategy:
         direction = self.get_trading_direction()
         symbols = self.get_symbols_to_trade()
         account = self.phx_api.fix_interface.get_account()
+        start_time = datetime.now(timezone.utc)
         for symbol in symbols:
             ticker = (self.exchange, symbol)
             book = self.phx_api.order_books.get(ticker)
             if book and book.mid_price:
-                order, msg = self.phx_api.fix_interface.new_order_single(
-                    self.exchange, symbol, direction, self.quantity, ord_type=fix.OrdType_MARKET, account=account
-                )
-                self.logger.info(
-                    f"{fn}: {self.exchange=}/{symbol=}: MKT {direction} order submitted {fix_message_string(msg)}"
-                )
+                sent_order = False
+                while not sent_order:
+                    if self.phx_api.rate_limiter.has_capacity(datetime.now(timezone.utc), 1):
+                        self.phx_api.rate_limiter.consume(datetime.now(timezone.utc))
+                        order, msg = self.phx_api.fix_interface.new_order_single(
+                            self.exchange,
+                            symbol,
+                            direction,
+                            self.quantity,
+                            ord_type=fix.OrdType_MARKET,
+                            account=account,
+                        )
+                        self.logger.info(
+                            f"{fn}: {self.exchange=}/{symbol=}: MKT {direction}"
+                            f" order submitted {fix_message_string(msg)}"
+                        )
+                        sent_order = True
+                    else:
+                        self.logger.info(f"{fn}: no rate limit capacity")
+                        since_start = pd.Timedelta(datetime.now(timezone.utc) - start_time)
+                        if since_start > self.trade_interval:
+                            self.logger.info(f"{fn}: waited {since_start} since start. Abandon.")
+                            return
+                        else:
+                            self.logger.info(f"{fn}: sleep for 1 second")
+                            time.sleep(1)
             else:
                 self.logger.info(f"{fn}: {self.exchange=}/{symbol=}: mid-price missing!")
 
@@ -144,6 +173,7 @@ class DeribitTestStrategy:
         direction = self.get_trading_direction()
         symbols = self.get_symbols_to_trade()
         account = self.phx_api.fix_interface.get_account()
+        start_time = datetime.now(timezone.utc)
         for symbol in symbols:
             ticker = (self.exchange, symbol)
             book = self.phx_api.order_books.get(ticker, None)
@@ -162,12 +192,33 @@ class DeribitTestStrategy:
                         f"{fn}: {self.exchange}/{symbol}: top of book {(top_bid, top_ask)} => "
                         f"passive {dir_str} order {self.quantity} @ {price}"
                     )
-                    order, msg = self.phx_api.fix_interface.new_order_single(
-                        self.exchange, symbol, direction, self.quantity, price, ord_type=fix.OrdType_LIMIT, account=account
-                    )
-                    self.logger.info(
-                        f"{fn}: {self.exchange}/{symbol}: passive {dir_str} order submitted:{fix_message_string(msg)}"
-                    )
+                    sent_order = False
+                    while not sent_order:
+                        if self.phx_api.rate_limiter.has_capacity(datetime.now(timezone.utc), 1):
+                            self.phx_api.rate_limiter.consume(datetime.now(timezone.utc))
+                            order, msg = self.phx_api.fix_interface.new_order_single(
+                                self.exchange,
+                                symbol,
+                                direction,
+                                self.quantity,
+                                price,
+                                ord_type=fix.OrdType_LIMIT,
+                                account=account,
+                            )
+                            self.logger.info(
+                                f"{fn}: {self.exchange}/{symbol}: passive {dir_str} "
+                                f" order submitted:{fix_message_string(msg)}"
+                            )
+                            sent_order = True
+                        else:
+                            self.logger.info(f"{fn}: no rate limit capacity")
+                            since_start = pd.Timedelta(datetime.now(timezone.utc) - start_time)
+                            if since_start > self.trade_interval:
+                                self.logger.info(f"{fn}: waited {since_start} since start. Abandon.")
+                                return
+                            else:
+                                self.logger.info(f"{fn}: sleep for 1 second")
+                                time.sleep(1)
                 else:
                     self.logger.info(
                         f"{fn}: order book for {self.exchange=}/{symbol=} {top_bid=} {top_ask=}"

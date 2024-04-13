@@ -76,6 +76,9 @@ class OrderTrackerBase(object):
 
         self.last_update_time = last_update_time
         orders = self.to_orders(reports)
+        self.logger.info(
+            f"set_snapshots {orders=}"
+        )
         self.pending_orders = orders["pending"]
         self.open_orders = orders["working"]
         self.history_orders = orders["historical"]
@@ -222,6 +225,10 @@ class OrderTracker(OrderTrackerBase):
                 )
 
         elif report.ord_status == fix.OrdStatus_PENDING_NEW:
+            self.logger.info(
+                f"{self.__class__.__name__}: process fix.OrdStatus_PENDING_NEW "
+                f"{str(report)}"
+            )
             pending = self.pending_orders.get(report.cl_ord_id, None)
             if pending:
                 del self.pending_orders[report.cl_ord_id]
@@ -229,11 +236,12 @@ class OrderTracker(OrderTrackerBase):
             order = report.to_order(self.logger.error)
             self.open_orders[report.ord_id] = order
 
-            if pending is None:
-                error = (
-                    f"{self.__class__.__name__}: OrdStatus_PENDING_NEW "
-                    f"{report.cl_ord_id} not found in pending orders!"
-                )
+            # TODO: EK, check if this can be removed
+            # if pending is None:
+            #     error = (
+            #         f"{self.__class__.__name__}: OrdStatus_PENDING_NEW "
+            #         f"{report.cl_ord_id} not found in pending orders!"
+            #     )
 
         elif report.ord_status == fix.OrdStatus_NEW:
             order = self.open_orders.get(report.ord_id, None)
@@ -247,8 +255,7 @@ class OrderTracker(OrderTrackerBase):
                     transact_time=report.tx_time
                 )
                 self.open_orders[order.ord_id] = order
-
-            if order is None:
+            else:
                 error = (
                     f"{self.__class__.__name__}: OrdStatus_NEW "
                     f"{report.ord_id} not found in open orders!"
@@ -266,8 +273,7 @@ class OrderTracker(OrderTrackerBase):
                     last_qty=report.last_qty,
                     transact_time=report.tx_time
                 )
-
-            if order is None:
+            else:
                 error = (
                     f"{self.__class__.__name__}: "
                     f"OrdStatus_PENDING_CANCEL | OrdStatus_PENDING_REPLACE | OrdStatus_PENDING_CANCEL_REPLACE "
@@ -395,7 +401,24 @@ class OrderTracker(OrderTrackerBase):
                 f"unexpected exec type / order status combination {report}"
             )
 
-        if error is not None:
+        if error:
             self.logger.error(error)
 
         return order, error
+
+    def remove_order(self, ord_id: str, cl_ord_id: str) -> bool:
+        """Returns true if found and removed an order with those ids
+        False if not found"""
+        fn = "remove_order"
+        order = self.open_orders.get(ord_id)
+        if order:
+            self.logger.info(
+                f"{fn}: found open order with {ord_id=}. Move it to history"
+            )
+            self.history_orders[ord_id] = order
+            del self.open_orders[ord_id]
+        else:
+            order = self.pending_orders.get(cl_ord_id)
+            if order:
+                del self.pending_orders[cl_ord_id]
+        return order is not None

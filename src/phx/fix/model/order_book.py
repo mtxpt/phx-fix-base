@@ -54,15 +54,17 @@ class OrderBookSnapshot(Message):
     def key(self) -> Tuple[str, str]:
         return self.exchange, self.symbol
 
-    def __str__(self):
-        return (f"OrderBookSnapshot["
-                f"exchange={self.exchange}, "
-                f"symbol={self.symbol}, "
-                f"exchange_ts={self.exchange_ts}, "
-                f"local_ts={self.local_ts}, "
-                f"bids={self.bids}, "
-                f"asks={self.asks}"
-                f"]")
+    def __str__(self) -> str:
+        return (
+            f"OrderBookSnapshot["
+            f"exchange={self.exchange}, "
+            f"symbol={self.symbol}, "
+            f"exchange_ts={self.exchange_ts}, "
+            f"local_ts={self.local_ts}, "
+            f"bids={self.bids}, "
+            f"asks={self.asks}"
+            f"]"
+        )
 
 
 class OrderBookUpdate(Message):
