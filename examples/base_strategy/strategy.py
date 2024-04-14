@@ -5,18 +5,21 @@ from logging import Logger
 
 import pandas as pd
 import quickfix as fix
-from phx.api import PhxApi, DependencyAction
+# Phx modules
+from phx.api import DependencyAction, PhxApi
 from phx.fix.app import AppRunner
 from phx.fix.utils import fix_message_string, flip_trading_dir
 from phx.utils import TO_PIPS
-from phx.utils.limiter import MultiPeriodLimiter
 from phx.utils.price_utils import price_round_down, price_round_up
 from phx.utils.time import utcnow
-
 
 class TradingMode(str, Enum):
     MARKET_ORDERS = "market_orders"
     AGGRESSIVE_LIMIT_ORDERS = "aggressive_limit_orders"
+
+
+def generic_callback(msg, logger):
+    logger.info(f"Callback msg_type:{type(msg).__name__} {msg=}")
 
 
 class DeribitTestStrategy:
@@ -29,6 +32,17 @@ class DeribitTestStrategy:
         self.logger = logger
         self.exchange = "deribit"
         self.trading_symbols = ["ETH-PERPETUAL", "BTC-PERPETUAL"]
+        callbacks = {
+            "ExecReport": generic_callback,
+            "OrderBookSnapshot": generic_callback,
+            # "OrderBookUpdate": generic_callback,
+            "OrderCancelReject": generic_callback,
+            "OrderMassCancelReport": generic_callback,
+            "PositionReports": generic_callback,
+            "Reject": generic_callback,
+            "SecurityReport": generic_callback,
+            "Trades": generic_callback,
+        }
         self.phx_api = PhxApi(
             app_runner=app_runner,
             config=config,
@@ -36,6 +50,7 @@ class DeribitTestStrategy:
             mkt_symbols=self.trading_symbols,
             trading_symbols=self.trading_symbols,
             logger=logger,
+            callbacks=callbacks,
         )
         # time settings
         self.start_time = utcnow()
@@ -47,6 +62,7 @@ class DeribitTestStrategy:
         self.trading_mode = TradingMode.AGGRESSIVE_LIMIT_ORDERS
         self.aggressiveness_in_pips = 2
         self.current_trading_direction = fix.Side_BUY
+
 
     def get_symbols_to_trade(self):
         return list(self.trading_symbols)
@@ -182,11 +198,13 @@ class DeribitTestStrategy:
                 top_bid = book.top_bid_price
                 top_ask = book.top_ask_price
                 if top_bid and top_ask:
+                    high_ask = max(top_bid, top_ask)
+                    low_bid = min(top_bid, top_ask)
                     if direction == fix.Side_SELL:
-                        price = price_round_down(top_bid * (1 + TO_PIPS * self.aggressiveness_in_pips), min_tick_size)
+                        price = price_round_down(high_ask * (1 + TO_PIPS * self.aggressiveness_in_pips), min_tick_size)
                         dir_str = "sell"
                     else:
-                        price = price_round_up(top_ask * (1 - TO_PIPS * self.aggressiveness_in_pips), min_tick_size)
+                        price = price_round_up(low_bid * (1 - TO_PIPS * self.aggressiveness_in_pips), min_tick_size)
                         dir_str = "buy"
                     self.logger.info(
                         f"{fn}: {self.exchange}/{symbol}: top of book {(top_bid, top_ask)} => "
