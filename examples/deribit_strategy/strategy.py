@@ -49,7 +49,7 @@ class DeribitTestStrategy:
             exchange=self.exchange,
             mkt_symbols=self.trading_symbols,
             trading_symbols=self.trading_symbols,
-            logger=logger,
+            logger=self.logger,
             callbacks=callbacks,
         )
         # time settings
