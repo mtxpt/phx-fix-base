@@ -503,7 +503,12 @@ class PhxApi(ApiInterface, abc.ABC):
             num_open_orders_before = len(self.order_tracker.open_orders)
             self.order_tracker.process(msg, utcnow())
             # if we canceled all open orders -> store the fix message history
-            if self.to_stop and num_open_orders_before and not self.order_tracker.open_orders:
+            if (
+                self.to_stop
+                and num_open_orders_before
+                and not self.order_tracker.open_orders
+                and self.config.get("save_before_exit", True)
+            ):
                 self.logger.info(f"{fn} <==== all open orders cancelled")
                 self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
                 self.logger.info(f"{fn} <==== FIX message history saved")

@@ -54,7 +54,7 @@ class DeribitTestStrategy:
         )
         # time settings
         self.start_time = utcnow()
-        self.timeout = pd.Timedelta(config.get("timeout", "00:00:20"))
+        self.timeout = pd.Timedelta(config.get("timeout", "00:00:30"))
         self.last_trade_time = pd.Timestamp(0, tz="UTC")
         self.trade_interval = pd.Timedelta(config.get("trade_interval", "5s"))
         # order settings

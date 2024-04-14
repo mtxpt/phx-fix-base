@@ -69,13 +69,13 @@ class OrderBookSnapshot(Message):
 
 class OrderBookUpdate(Message):
 
-    def __init__(self, exchange, symbol, exchange_ts, local_ts, updates: List[Tuple[float, float, bool]] = []):
+    def __init__(self, exchange, symbol, exchange_ts, local_ts):
         Message.__init__(self)
         self.exchange = exchange
         self.symbol = symbol
         self.exchange_ts = exchange_ts
         self.local_ts = local_ts
-        self.updates = updates
+        self.updates: List[Tuple[float, float, bool]] = []
 
     def key(self) -> Tuple[str, str]:
         return self.exchange, self.symbol

@@ -15,7 +15,7 @@ def str_to_datetime(date_time_str) -> Optional[datetime]:
         return None
 
 
-def datetime_to_str(date_time: datetime) -> str:
+def datetime_to_str(date_time: datetime) -> Optional[str]:
     try:
         # 20200720-07:32:15.114
         return date_time.strftime('%Y%m%d-%H:%M:%S.%f')

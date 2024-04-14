@@ -472,11 +472,12 @@ class App(fix.Application, FixInterface):
             1 = Ask, (fix.MDEntryType_OFFER)
             2 = Trade (fix.MDEntryType_TRADE)
         """
+        fn = "on_market_data_refresh_incremental"
         receive_ts = extract_message_field_value(fix.SendingTime(), message, "datetime")
         group = fix44.MarketDataIncrementalRefresh.NoMDEntries()
         group_size = extract_message_field_value(fix.NoMDEntries(), message, "int")
 
-        self.logger.debug(f"on_market_data_refresh_incremental receive_ts={receive_ts} group_size={group_size}")
+        self.logger.debug(f"{fn} receive_ts={receive_ts} group_size={group_size}")
 
         book_key = None
         book_update = None
@@ -500,15 +501,28 @@ class App(fix.Application, FixInterface):
             if entry_type == fix.MDEntryType_TRADE:
                 trades.append(Trade(exchange, symbol, timestamp, receive_ts, side, price, size))
             else:
+                self.logger.debug(
+                    f"{fn} {exchange=} {symbol=} "
+                    f" {price=} {size=} {entry_type=}"
+                )
                 if book_key != (exchange, symbol):
                     book_key = (exchange, symbol)
                     if book_key not in book_updates:
                         book_updates[book_key] = OrderBookUpdate(exchange, symbol, timestamp, receive_ts)
                     book_update = book_updates[book_key]
+                    self.logger.debug(
+                        f"{fn} set book_update {book_key=} update:{str(book_update)}"
+                    )
                 book_update.add(price, size, entry_type == fix.MDEntryType_BID)
+                self.logger.debug(
+                    f"{fn} added to book_update {book_key=} update:{str(book_update)}"
+                )
 
         if book_updates:
-            for book_update in book_updates.values():
+            for book_key, book_update in book_updates.items():
+                self.logger.debug(
+                    f"{fn} enqueue book_update {book_key=} update:{str(book_update)}"
+                )
                 self.message_queue.put(book_update, block=False)
 
         if trades:

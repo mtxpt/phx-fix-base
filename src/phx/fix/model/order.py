@@ -226,7 +226,7 @@ class Order:
             by_cl_ord_id=True,
             reverse=True
     ):
-        def key_func(o: Order):
+        def key_func(o: Order) -> str:
             return o.cl_ord_id if o.cl_ord_id is not None else 0
 
         if orders:

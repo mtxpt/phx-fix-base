@@ -90,16 +90,20 @@ PyCharm can also be configured for Remote Development. This allows to run the pr
 while using PyCharm client.
 
 ## Testing PhxFix API
-Example of simple strategy using API is in `phx-fix-base/examples/base_strategy`.
-In order to run the examples your environment should have:
+Example of simple strategy using API is in `phx-fix-base/examples/deribit_strategy`.
+To ensure that your code can import `phx-fix-bases` modules. your environment should have:
 ```bash
 export PYTHONPATH="<path-to-phx-fix-base>/src:${PYTHONPATH}"
 ```
-this ensures that your code can import phx-fix-bases modules.
+
+Run example:
 ```bash
 # Ensure your conda environment is activated
-% cd examples/base_strategy
+% cd examples/deribit_strategy
+% python3 main.py
 ```
+Log files are written under `temp` sub-folder.
+
 ## User Installation
 1. Download `phx-fix-base` project with
 ```bash
