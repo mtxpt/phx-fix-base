@@ -1,17 +1,12 @@
 import abc
-from enum import IntEnum
-from typing import Optional, Tuple, Union
+from typing import Union
 
-import pandas as pd
-from phx.fix.model import (BusinessMessageReject, Create, ExecReport,
-                           GatewayNotReady, Heartbeat, Logon, Logout,
-                           MarketDataRequestReject, MassStatusExecReport,
-                           MassStatusExecReportNoOrders, NotConnected,
-                           OrderBookSnapshot, OrderBookUpdate,
-                           OrderMassCancelReport, PositionReports,
-                           PositionRequestAck, Reject, SecurityReport,
-                           TradeCaptureReport, TradeCaptureReportRequestAck,
-                           Trades)
+from phx.fix.model import (
+    BusinessMessageReject, Create, ExecReport, GatewayNotReady, Heartbeat, Logon, Logout,
+    MarketDataRequestReject, MassStatusExecReport, MassStatusExecReportNoOrders, NotConnected,
+    OrderBookSnapshot, OrderBookUpdate, OrderMassCancelReport, PositionReports, PositionRequestAck,
+    Reject, SecurityReport, TradeCaptureReport, TradeCaptureReportRequestAck, Trades
+)
 
 
 class ApiInterface(abc.ABC):

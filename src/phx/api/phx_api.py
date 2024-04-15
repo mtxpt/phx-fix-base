@@ -1,7 +1,6 @@
 import abc
 import queue
 import sys
-import time
 import threading
 from enum import Enum
 from logging import Logger
@@ -9,25 +8,26 @@ from typing import Any, Callable, List, Set, Dict, Tuple, Union, Optional
 
 import pandas as pd
 import quickfix as fix
-from phx.fix.app.interface import FixInterface
+
+from phx.api import ApiInterface, Ticker
 from phx.fix.app.app_runner import AppRunner
+from phx.fix.app.interface import FixInterface
 from phx.fix.model import ExecReport, PositionReports, Security, SecurityReport, TradeCaptureReport
-from phx.fix.model import Reject, OrderCancelReject, BusinessMessageReject, MarketDataRequestReject
 from phx.fix.model import Logon, Create, Logout, Heartbeat, NotConnected, GatewayNotReady
 from phx.fix.model import Order, OrderBookSnapshot, OrderBookUpdate, Trades
 from phx.fix.model import OrderMassCancelReport, MassStatusExecReport, MassStatusExecReportNoOrders
 from phx.fix.model import PositionRequestAck, TradeCaptureReportRequestAck
+from phx.fix.model import Reject, OrderCancelReject, BusinessMessageReject, MarketDataRequestReject
 from phx.fix.model.order_book import OrderBook
 from phx.fix.tracker import OrderTracker, PositionTracker
 from phx.fix.utils import fix_message_string
+from phx.utils import CHECK_MARK, CROSS_MARK
 from phx.utils.limiter import MultiPeriodLimiter
 from phx.utils.thread import AlignedRepeatingTimer
-from phx.utils import CHECK_MARK, CROSS_MARK, fn
 from phx.utils.time import utcnow, dt_now_utc
 
-# from phx.utils.price_utils import RoundingDirection, price_round, price_round_down, price_round_up
 
-from phx.api import ApiInterface, Ticker
+# from phx.utils.price_utils import RoundingDirection, price_round, price_round_down, price_round_up
 
 
 def single_task(key, target_dict, current_dict, pre="  ") -> List[str]:
@@ -71,7 +71,7 @@ class PhxApi(ApiInterface, abc.ABC):
             logger: Logger = None,
             callbacks: Optional[Dict[str, Callable]] = None,
     ):
-        # Initialize variables from the parameters
+        # initialize variables from the parameters
         self.logger: Logger = logger if logger is not None else app_runner.logger
         self.app_runner = app_runner
         self.fix_interface: FixInterface = app_runner.app
@@ -80,44 +80,48 @@ class PhxApi(ApiInterface, abc.ABC):
         self.mkt_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in mkt_symbols])
         self.trading_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in trading_symbols])
         self.exchange = exchange
-        # Algo callbacks to be called when object of specific class arrives from FIX queue
+
+        # algo callbacks to be called when object of specific class arrives from FIX queue
         self.callbacks: Dict[str, Callable] = callbacks or {}
         self.logger.info(
             f"PhxApi callbacks for events: {list(self.callbacks.keys())}"
         )
+
         # parameters from configuration
         self.queue_timeout = pd.Timedelta(self.config.get("queue_timeout", "00:00:10"))
-        # Rate Limiter setup
+
+        # rate limiter setup
         rate_limit_config = self.config.get("rate_limit_for_period", [(1, "1s")])
         self.rate_limiter = MultiPeriodLimiter(rate_limit_config, self.logger)
         self.logger.info(f"PhxApi Rate Limits:\n{self.rate_limiter}")
-        # state variables used by algo to determine readiness for starting and stopping trading
-        # and next actions
+
+        # state variables used by algo to determine readiness for starting and stopping trading and next actions
         self.dependency_actions = PhxApi.get_init_dependency_actions()
         self.logged_in = False  # True if API logged into Phoenix FIX Bridge
         self.subscribed = False  # indicates if API sent subscriptions to all data
         self.to_stop = False  # When set to true - API stops and disconnects
+
         # subscription flags set from configuration
         self.subscribe_for_position_updates = self.config.get("subscribe_for_position_updates", True)
         self.subscribe_for_trade_capture_reports = self.config.get("subscribe_for_trade_capture_reports", True)
-        # TODO: check what compare_order_status can be used for
-        self.compare_order_status = self.config.get("compare_order_status", True)
         self.cancel_orders_on_exit = self.config.get("cancel_orders_on_exit", True)
         self.use_mass_cancel_request = False  # Not ready yet
         self.cancel_timeout_seconds = self.config.get("cancel_timeout_seconds", 5)
         self.print_reports = self.config.get("print_reports", True)
+
         # tracking position, orders, reports etc
         self.position_tracker = PositionTracker("local", True, self.logger)
         self.order_tracker = OrderTracker("local", self.logger, self.position_tracker, self.print_reports)
         self.position_report_counter: Dict[Tuple[str, str], int] = dict()
         self.mass_status_exec_reports = []
+
         # order books
         self.order_books: Dict[Tuple[str, str], OrderBook] = {}
+
         # security list
         self.security_list: Dict[Tuple[str, str], Security] = {}
 
-        self.exception = None
-        # Timers and threads
+        # timers and threads
         self.timers_started = False
         self.timer_interval = pd.Timedelta(self.config.get("timer_interval", "01:00:00"))
         self.timer_alignment_freq = self.config.get("timer_alignment_freq", "1h")
@@ -128,7 +132,9 @@ class PhxApi(ApiInterface, abc.ABC):
             alignment_freq=self.timer_alignment_freq
         )
         self.run_thread = threading.Thread(name='RunApi', target=self.run, args=())
-        # STARTS INTERNAL THREADS
+
+        # start the internal threads
+        self.exception = None
         self.start_threads()
 
     @staticmethod

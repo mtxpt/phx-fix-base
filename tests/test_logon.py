@@ -14,7 +14,7 @@ def temp_dir() -> Path:
     return local.parent.absolute() / "temp"
 
 
-class Strategy:
+class Dispatcher:
 
     def __init__(self, message_queue: queue.Queue, runner: AppRunner):
         self.message_queue = message_queue
@@ -24,7 +24,7 @@ class Strategy:
         self.logger = self.runner.logger
         self.delay = 1
 
-    def run(self):
+    def dispatch(self):
         error = "no errors"
         while True:
             msg = self.message_queue.get()
@@ -52,7 +52,7 @@ class Strategy:
         self.logger.info(f"====> Starting FIX app...")
         self.runner.start()
         self.logger.info(f"Starting strategy processing FIX messages...")
-        self.thread = threading.Thread(target=self.run, args=())
+        self.thread = threading.Thread(target=self.dispatch, args=())
         self.thread.start()
 
     def stop(self):
@@ -61,7 +61,7 @@ class Strategy:
 
 
 if __name__ == "__main__":
-    export_dir = temp_dir() / "simple_logon"
+    export_dir = temp_dir() / "test_logon"
     make_dirs(export_dir)
 
     # setup logger to console and log file
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     app = App(message_queue, fix_session_settings, logger, str(export_dir))
     app_runner = AppRunner(app, fix_session_settings, fix_configs.get_session_id(), logger)
 
-    # start the strategy which pulls from the message queue and dispatches accordingly
-    strategy = Strategy(message_queue, app_runner)
-    strategy.start()
-    strategy.stop()
+    # start the message processor which pulls from the message queue and dispatches accordingly
+    dispatcher = Dispatcher(message_queue, app_runner)
+    dispatcher.start()
+    dispatcher.stop()

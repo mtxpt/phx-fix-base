@@ -3,7 +3,8 @@
 This repository provides the foundations for FIX based trading applications based on the widely used 
 [QuickFix](https://quickfixengine.org) open source library and its application framework. 
 
-A simplistic FIX client implementing a FIX based trading strategy can be found in this 
+A simplistic FIX client implementing a fully fledged trading strategy 
+building on this foundation library can be found in this 
 [repository](https://github.com/mtxpt/phx-fix-examples).
 
 
@@ -60,7 +61,7 @@ The Python QuickFIX bindings also fail to install on Windows. Fortunately, for W
 To setup the Python environment using Conda follow these steps:
 
   - Install Conda or Miniconda
-  - Create a new environment with `conda create --name phx python=3.9`
+  - Create a new environment with `conda create --name phx python=3.11`
   - Activate the environment
   - Install all dependencies first `pip install -r requirements.txt` 
   - Download the QuickFix wheel `quickfix‑1.15.1‑cp39‑cp39‑win_amd64.whl`
@@ -79,43 +80,52 @@ Ignoring quickfix: markers 'platform_machine != "arm64" and sys_platform != "win
 To conveniently work with PyCharm it must be configured to use the proper interpreter.
 Set the Python interpreter managed by the Conda package manager in `./opt/conda/`
 
-Lower right corner in PyCharm choose "Python Interpreter". Then
+Lower right corner in PyCharm or in `Settings` choose `Python Interpreter`. Then
 
   - `Add New Interpreter` -> `Add Local Interpreter`
   - Choose `Conda Environment` with conda executable `<path to>/opt/conda/condabin/conda` 
   - Click the button `Load Environments`, make sure the radio button `Use existing environment` is selected
   - Choose `dev` and give it optionally another name by editing the interpreter configuration
 
-PyCharm can also be configured for Remote Development. This allows to run the project on the server,
-while using PyCharm client.
+Next navigate to `Settings` -> `Project` -> `Project Structure` and configure the directory `src` as 
+source folder and the `tests` directory as test folder. 
+
 
 ## Testing PhxFix API
+
 Example of simple strategy using API is in `phx-fix-base/examples/deribit_strategy`.
-To ensure that your code can import `phx-fix-bases` modules. your environment should have:
-```bash
+To ensure that your code can import `phx-fix-bases` modules your environment should have
+
+``` 
 export PYTHONPATH="<path-to-phx-fix-base>/src:${PYTHONPATH}"
 ```
 
-Run example:
+Run the example from the command line:
+
 ```bash
 # Ensure your conda environment is activated
-% cd examples/deribit_strategy
-% python3 main.py
+cd examples/deribit_strategy
+python3 main.py
 ```
-Log files are written under `temp` sub-folder.
+
+Log files are written to the `temp` sub-folder.
 
 ## User Installation
-1. Download `phx-fix-base` project with
-```bash
-% git clone git@github.com:mtxpt/phx-fix-base.git
-```
-2. Install `phx-fix-base` library in your environment of choice by
-```bash
-% pip install git+file:///<path to installed phx-fix-base project>
-```
-for example: `pip install git+file:///Users/user/phoenix/phx-fix-base`
-3. import `phx-fix-base` modules into your code and use them. For example see: 
-`<phx-fix-base>/tests/test_base_strategy`
+
+ - Download `phx-fix-base` project with
+  ```bash
+  git clone git@github.com:mtxpt/phx-fix-base.git
+  ```
+ - Install `phx-fix-base` library in your environment of choice 
+  ```bash
+  pip install git+file:///<path to installed phx-fix-base project>
+  ```
+  for example 
+  ```bash 
+  pip install git+file:///Users/user/phoenix/phx-fix-base
+  ```
+ - Import `phx-fix-base` modules into your code and use them. 
+   For example see`<phx-fix-base>/tests/test_base_strategy`
 
 ## Developer Notes
 
