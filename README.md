@@ -1,11 +1,10 @@
-# Phoenix Prime FIX Foundation Library 
+# Phoenix Prime FIX Foundation Package 
 
 This repository provides the foundations for FIX based trading applications based on the widely used 
 [QuickFix](https://quickfixengine.org) open source library and its application framework. 
 
-A simplistic FIX client implementing a fully fledged trading strategy 
-building on this foundation library can be found in this 
-[repository](https://github.com/mtxpt/phx-fix-examples).
+A simplistic FIX client implementing a fully fledged trading strategy building on this foundation package 
+can be found in this [repository](https://github.com/mtxpt/phx-fix-examples).
 
 
 ## Requirements  
@@ -18,7 +17,7 @@ The project requires
 
 ## Developer Installation 
 
-It is highly recommended to create a new Python environment. On Linux or MacOs the script
+It is highly recommended to create a new Python environment. On Linux or macOS the script
 `scripts/setup_all.sh` automates the creation of a [conda](https://docs.conda.io/en/latest/) 
 based environment with all dependencies installed. Optionally provide the argument `clean` 
 to remove existing environment and rebuild all. 
@@ -40,7 +39,11 @@ Note that `requirements.txt` does not install QuickFix for macOS with arm64 arch
 as the current QuickFix version 1.15.1 has some issues and requires a patch. 
 
 
-## Custom Build QuickFix for arm64 on macOS 
+## QuickFIX 
+
+This project depends on [QuickFIX](http://www.quickfixengine.org/). Check their [license agreement](http://www.quickfixengine.org/LICENSE) for licensing information.
+
+### Custom Build QuickFix for arm64 on macOS 
 
 Building QuickFix for Apple arm64 requires a patch. The following script
 automates the patch and builds QuickFix for `arm64` from source:
@@ -49,16 +52,14 @@ automates the patch and builds QuickFix for `arm64` from source:
 scripts/build_quickfix_arm64.sh
 ```
 
-If you use `setup_all.sh` you don't have to execute this build step as it is handled 
-by `setup_all.sh` as well. 
+If you use `setup_all.sh` you don't have to execute this build step as it is handled by `setup_all.sh` as well.
 
-
-## Installing QuicFix on Windows
+### Installing QuicFix on Windows
 
 The Python QuickFIX bindings also fail to install on Windows. Fortunately, for Windows there are 
 [prebuilt wheel packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/#quickfix). 
 
-To setup the Python environment using Conda follow these steps:
+To set up the Python environment using Conda follow these steps:
 
   - Install Conda or Miniconda
   - Create a new environment with `conda create --name phx python=3.11`
@@ -91,7 +92,17 @@ Next navigate to `Settings` -> `Project` -> `Project Structure` and configure th
 source folder and the `tests` directory as test folder. 
 
 
-## User Installation
+## User 
+
+The package can be added to the `requirements.txt` through a 
+
+```
+# Phoenix Prime FIX foundation package
+phx-fix-base @ git+https://github.com/mtxpt/phx-fix-base.git@master
+```
+
+
+Alternatively, follow these steps
 
  - Download `phx-fix-base` project with
   ```bash
