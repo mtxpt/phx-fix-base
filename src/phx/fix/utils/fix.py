@@ -520,7 +520,8 @@ def fix_session_config(
         socket_connect_host: str = "127.0.0.1",
         data_dictionary: str = "fix_spec/FIX44.xml",
         file_store_path: str = "./sessions/",
-        account: str = "A1"
+        account: str = "A1",
+        heart_beat: int = 30
 ) -> dict:
     return {
         "BeginString": begin_string,
@@ -529,7 +530,7 @@ def fix_session_config(
         "Username": user_name,
         "Password": password,
         "FixAuthenticationMethod": fix_auth_method.value,
-        "HeartBtInt": 30,
+        "HeartBtInt": heart_beat,
         "SocketConnectPort": socket_connect_port,
         "SocketConnectHost": socket_connect_host,
         "DataDictionary": data_dictionary,
