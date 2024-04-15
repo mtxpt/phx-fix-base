@@ -6,6 +6,9 @@ This repository provides the foundations for FIX based trading applications base
 A simplistic FIX client implementing a fully fledged trading strategy building on this foundation package 
 can be found in this [repository](https://github.com/mtxpt/phx-fix-examples).
 
+Detailed documentation on the Phoenix Prime Service API and the Phoenix Prime FIX endpoints can be found in the 
+official Phoenix Prime [documentation](https://www.matrixport.com/docs/en-us/phoenix.html). 
+
 
 ## Requirements  
 
