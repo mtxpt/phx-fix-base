@@ -11,7 +11,7 @@ include = ["phx.fix", "phx.fix.app", "phx.fix.model", "phx.fix.tracker", "phx.fi
 [project]
 name = "phx-fix-base"
 description = "Phoenix Prime FIX base functionality"
-version = "0.9"
+version = "1.0"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
