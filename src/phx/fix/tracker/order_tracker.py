@@ -236,13 +236,6 @@ class OrderTracker(OrderTrackerBase):
             order = report.to_order(self.logger.error)
             self.open_orders[report.ord_id] = order
 
-            # TODO: EK, check if this can be removed
-            # if pending is None:
-            #     error = (
-            #         f"{self.__class__.__name__}: OrdStatus_PENDING_NEW "
-            #         f"{report.cl_ord_id} not found in pending orders!"
-            #     )
-
         elif report.ord_status == fix.OrdStatus_NEW:
             order = self.open_orders.get(report.ord_id, None)
             if order:

@@ -35,7 +35,7 @@ class Dispatcher:
                 self.logger.info(f"****> {msg} - going to stop in {self.delay}s")
                 time.sleep(2)
                 self.logged_on = True
-                self.logger.info(f"****> Stopping FIX app...")
+                self.logger.info(f"****> stopping FIX app...")
                 self.runner.stop()
             elif isinstance(msg, Logout) and not self.logged_on:
                 self.logger.info(f"****> {msg} without Logon first - most likely connection problem - stopping now")
@@ -44,14 +44,14 @@ class Dispatcher:
             elif isinstance(msg, Logout) and self.logged_on:
                 break
             else:
-                self.logger.info(f"****> Unexpected message {msg}")
+                self.logger.info(f"****> unexpected message {msg}")
 
-        self.logger.info(f"****> Message loop completed with {error}")
+        self.logger.info(f"****> message loop completed with {error}")
 
     def start(self):
-        self.logger.info(f"====> Starting FIX app...")
+        self.logger.info(f"====> starting FIX app...")
         self.runner.start()
-        self.logger.info(f"Starting strategy processing FIX messages...")
+        self.logger.info(f"starting strategy processing FIX messages...")
         self.thread = threading.Thread(target=self.dispatch, args=())
         self.thread.start()
 

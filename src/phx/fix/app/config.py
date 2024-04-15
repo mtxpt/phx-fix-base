@@ -110,7 +110,7 @@ class FixSessionConfig(object):
             socket_connect_port="1238",
             socket_connect_host="127.0.0.1",
             data_dir=None,
-            fix_schema_dict:str = None,
+            fix_schema_dict: str = None,
             root=None
     ):
         self.sender_comp_id = sender_comp_id

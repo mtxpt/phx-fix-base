@@ -1,6 +1,5 @@
 import abc
 import queue
-import sys
 import threading
 from enum import Enum
 from logging import Logger
@@ -160,10 +159,12 @@ class PhxApi(ApiInterface, abc.ABC):
             try:
                 # blocking here and wait for next message until timeout
                 msg = self.message_queue.get(timeout=self.queue_timeout.total_seconds())
+
                 # first check if to call client's callback
                 msg_class_name = type(msg).__name__
                 if msg_class_name in self.callbacks:
                     self.callbacks[msg_class_name](msg, self.logger)
+
                 # call internal handler
                 match msg:
                     case OrderBookUpdate():
@@ -230,7 +231,7 @@ class PhxApi(ApiInterface, abc.ABC):
             self.logger.exception(f"failed to save fix message history: {e}")
 
     def exec_state_evaluation(self):
-        fn = "exec_state_evaluation"
+        fn = self.exec_state_evaluation.__name__
         if self.to_stop and not self.is_ready_to_disconnect():
             # algo set to_stop=True but still open orders
             self.logger.info(f"{fn}: {self.to_stop=} and {self.is_ready_to_disconnect()=}. Stopping...")
@@ -261,8 +262,7 @@ class PhxApi(ApiInterface, abc.ABC):
         self.subscribed = True
 
     def stop_api(self) -> None:
-        fn = sys._getframe().f_code.co_name
-        max_process_time_secs = 10
+        fn = self.stop_api.__name__
         if self.logged_in and self.cancel_orders_on_exit:
             self.logger.info(
                 f"{fn} cancelling {len(self.order_tracker.open_orders)} orders on exit")
@@ -291,8 +291,10 @@ class PhxApi(ApiInterface, abc.ABC):
             self.logger.info(f"{fn} keep orders alive on exit")
 
     def is_ready_to_disconnect(self) -> bool:
-        # returns True if API to_stop flag is True and no open orders
-        # means API can disconnect now
+        """
+        Checks if API is ready to be disconnected, which is if API to_stop flag is True
+        and no open orders exist.
+        """
         return self.to_stop and (
             not self.cancel_orders_on_exit or
             not self.order_tracker.open_orders
@@ -602,6 +604,7 @@ class PhxApi(ApiInterface, abc.ABC):
 
     def file_name_prefix(self) -> str:
         timestamp = pd.Timestamp.utcnow().strftime("%Y_%m_%d_%H%M%S")
+        # noinspection PyBroadException
         try:
             username = self.fix_interface.get_username()
             account = self.fix_interface.get_account()

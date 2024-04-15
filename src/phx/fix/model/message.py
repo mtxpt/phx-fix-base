@@ -178,6 +178,7 @@ class OrderCancelReject(Message):
             "]"
         )
 
+
 class MarketDataRequestReject(Message):
 
     def __init__(self, reason, text):

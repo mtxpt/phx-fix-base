@@ -129,7 +129,7 @@ class App(fix.Application, FixInterface):
     @staticmethod
     def get_random_string(length):
         letters = string.ascii_lowercase
-        result_str = ''.join(random.choice(letters) for i in range(length))
+        result_str = ''.join(random.choice(letters) for _ in range(length))
         return result_str
 
     def toAdmin(self, message: fix.Message, session_id: fix.SessionID):
@@ -187,7 +187,7 @@ class App(fix.Application, FixInterface):
                 self.on_reject(message, session_id)
             else:
                 self.logger.error(f"[toAdmin] {session_id} unhandled message | {fix_message_string(message)}")
-            #Need to record down the final modified to admin message
+            # need to record down the final modified to admin message
             msg = fix_message_string(message)
             self.sent_admin_message_history.append(msg)
             self.logger.debug(f"[toAdmin] {session_id} | {msg} ")

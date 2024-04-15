@@ -121,24 +121,24 @@ order_type_dict = {
     "2": "Limit",
     "3": "Stop",
     "4": "Stop limit",
-    "5": "Market on close",                   # (No longer used)
+    "5": "Market on close",                   # No longer used
     "6": "With or without",
-    "7": "Limit or better",                   # (Deprecated)
+    "7": "Limit or better",                   # Deprecated
     "8": "Limit with or without",
     "9": "On basis",
-    "A": "On close",                          # (No longer used)
-    "B": "Limit on close",                    # (No longer used)
-    "C": "Forex - Market",                    # (No longer used)
+    "A": "On close",                          # No longer used
+    "B": "Limit on close",                    # No longer used
+    "C": "Forex - Market",                    # No longer used
     "D": "Previously quoted",
     "E": "Previously indicated",
-    "F": "Forex - Limit",                     # (No longer used)
+    "F": "Forex - Limit",                     # No longer used
     "G": "Forex - Swap",
-    "H": "Forex - Previously Quoted",         # (No longer used)
-    "I": "Funari",                            # (Limit Day Order with unexecuted portion handled as Market On Close. E.g. Japan)
-    "J": "Market If Touched",                 # (MIT)
-    "K": "Market with Leftover as Limit",     # (market order then unexecuted quantity becomes limit order at last price)
-    "L": "Previous Fund Valuation Point",     # (Historic pricing) (for CIV)
-    "M": "Next Fund Valuation Point",         # (Forward pricing) (for CIV)
+    "H": "Forex - Previously Quoted",         # No longer used
+    "I": "Funari",                            # Limit Day Order with un-executed portion handled as Market On Close
+    "J": "Market If Touched",                 # MIT
+    "K": "Market with Leftover as Limit",     # Market order then un-executed quantity becomes limit order at last price
+    "L": "Previous Fund Valuation Point",     # Historic pricing (for CIV)
+    "M": "Next Fund Valuation Point",         # Forward pricing (for CIV)
     "P": "Pegged"
 }
 
@@ -220,24 +220,24 @@ def side_to_string(side):
 
 exec_type_dict = {
     "0": "New",
-    "1": "PartialFill",       # (Replaced)
-    "2": "Fill",              # (Replaced)
+    "1": "PartialFill",       # Replaced
+    "2": "Fill",              # Replaced
     "3": "DoneForDay",
     "4": "Canceled",
     "5": "Replaced",
-    "6": "PendingCancel",    # (e.g. result of Order Cancel Request <F>)
+    "6": "PendingCancel",     # e.g. result of Order Cancel Request <F>
     "7": "Stopped",
     "8": "Rejected",
     "9": "Suspended",
     "A": "PendingNew",
     "B": "Calculated",
     "C": "Expired",
-    "D": "Restated",          # (Execution Report <8> sent unsolicited by sellside with ExecRestatementReason <378> set)
-    "E": "PendingReplace",    # (e.g. result of Order Cancel/Replace Request <G>)
-    "F": "Trade",             # (partial fill or fill)
-    "G": "TradeCorrect",      # (formerly an ExecTransType <20>)
-    "H": "TradeCancel",       # (formerly an ExecTransType <20>)
-    "I": "OrderStatus"        # (formerly an ExecTransType <20>)
+    "D": "Restated",          # Execution Report <8> sent unsolicited by sell-side with ExecRestatementReason <378> set
+    "E": "PendingReplace",    # e.g. result of Order Cancel/Replace Request <G>
+    "F": "Trade",             # partial fill or fill
+    "G": "TradeCorrect",      # formerly an ExecTransType <20>
+    "H": "TradeCancel",       # formerly an ExecTransType <20>
+    "I": "OrderStatus"        # formerly an ExecTransType <20>
 }
 
 
