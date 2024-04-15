@@ -54,13 +54,12 @@ scripts/build_QuickFIX_arm64.sh
 
 If you use `setup_all.sh` you don't have to execute this build step as it is handled by `setup_all.sh` as well.
 
-### Installing QuicFix on Windows
+### Installing QuickFIX on Windows
 
 The Python QuickFIX bindings also fail to install on Windows. Fortunately, for Windows there are 
 [prebuilt wheel packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/#QuickFIX). 
 
 To set up the Python environment using Conda follow these steps:
-
   - Install Conda or Miniconda
   - Create a new environment with `conda create --name phx python=3.11`
   - Activate the environment
