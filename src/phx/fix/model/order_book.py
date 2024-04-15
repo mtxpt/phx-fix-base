@@ -54,26 +54,28 @@ class OrderBookSnapshot(Message):
     def key(self) -> Tuple[str, str]:
         return self.exchange, self.symbol
 
-    def __str__(self):
-        return (f"OrderBookSnapshot["
-                f"exchange={self.exchange}, "
-                f"symbol={self.symbol}, "
-                f"exchange_ts={self.exchange_ts}, "
-                f"local_ts={self.local_ts}, "
-                f"bids={self.bids}, "
-                f"asks={self.asks}"
-                f"]")
+    def __str__(self) -> str:
+        return (
+            f"OrderBookSnapshot["
+            f"exchange={self.exchange}, "
+            f"symbol={self.symbol}, "
+            f"exchange_ts={self.exchange_ts}, "
+            f"local_ts={self.local_ts}, "
+            f"bids={self.bids}, "
+            f"asks={self.asks}"
+            f"]"
+        )
 
 
 class OrderBookUpdate(Message):
 
-    def __init__(self, exchange, symbol, exchange_ts, local_ts, updates: List[Tuple[float, float, bool]] = []):
+    def __init__(self, exchange, symbol, exchange_ts, local_ts):
         Message.__init__(self)
         self.exchange = exchange
         self.symbol = symbol
         self.exchange_ts = exchange_ts
         self.local_ts = local_ts
-        self.updates = updates
+        self.updates: List[Tuple[float, float, bool]] = []
 
     def key(self) -> Tuple[str, str]:
         return self.exchange, self.symbol

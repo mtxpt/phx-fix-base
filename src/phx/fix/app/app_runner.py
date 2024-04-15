@@ -1,6 +1,6 @@
 import logging
-import quickfix as fix
 
+import quickfix as fix
 from phx.fix.app import App
 
 

@@ -1,13 +1,11 @@
 {
-  "trading_symbols": [["deribit", "BTC-PERPETUAL"]],
-
   "quantity": 100,
-  "trade_interval": "00:00:10.000",
-
+  "trade_interval": "00:00:5.000",
+  "rate_limit_for_period": [["2", "1s"], ["20", "30s"]],
   # cancel on exit
   "cancel_orders_on_exit": True,
   "cancel_timeout_seconds": 5,
-  "save_before_cancel_orders_on_exit": False,
+  "save_before_exit": False,
 
   # error handing on gateway not ready
   "cancel_on_gateway_not_ready": True,

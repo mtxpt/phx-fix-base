@@ -1,17 +1,18 @@
 import abc
 import queue
 import sys
+import time
 import threading
 from enum import Enum
 from logging import Logger
-from typing import Any, List, Set, Dict, Tuple, Union, Optional
+from typing import Any, Callable, List, Set, Dict, Tuple, Union, Optional
 
 import pandas as pd
 import quickfix as fix
 from phx.fix.app.interface import FixInterface
 from phx.fix.app.app_runner import AppRunner
 from phx.fix.model import ExecReport, PositionReports, Security, SecurityReport, TradeCaptureReport
-from phx.fix.model import Reject, BusinessMessageReject, MarketDataRequestReject
+from phx.fix.model import Reject, OrderCancelReject, BusinessMessageReject, MarketDataRequestReject
 from phx.fix.model import Logon, Create, Logout, Heartbeat, NotConnected, GatewayNotReady
 from phx.fix.model import Order, OrderBookSnapshot, OrderBookUpdate, Trades
 from phx.fix.model import OrderMassCancelReport, MassStatusExecReport, MassStatusExecReportNoOrders
@@ -19,9 +20,10 @@ from phx.fix.model import PositionRequestAck, TradeCaptureReportRequestAck
 from phx.fix.model.order_book import OrderBook
 from phx.fix.tracker import OrderTracker, PositionTracker
 from phx.fix.utils import fix_message_string
+from phx.utils.limiter import MultiPeriodLimiter
 from phx.utils.thread import AlignedRepeatingTimer
 from phx.utils import CHECK_MARK, CROSS_MARK, fn
-from phx.utils.time import utcnow
+from phx.utils.time import utcnow, dt_now_utc
 
 # from phx.utils.price_utils import RoundingDirection, price_round, price_round_down, price_round_up
 
@@ -67,40 +69,58 @@ class PhxApi(ApiInterface, abc.ABC):
             mkt_symbols: List[str],
             trading_symbols: List[str],
             logger: Logger = None,
+            callbacks: Optional[Dict[str, Callable]] = None,
     ):
-        config = config or {}
+        # Initialize variables from the parameters
+        self.logger: Logger = logger if logger is not None else app_runner.logger
         self.app_runner = app_runner
         self.fix_interface: FixInterface = app_runner.app
         self.message_queue: queue.Queue = app_runner.app.message_queue
-        self.config: dict = config
-        self.logger: Logger = logger if logger is not None else app_runner.logger
-        self.queue_timeout = pd.Timedelta(config.get("queue_timeout", "00:00:10"))
-        self.logged_in = False
-        self.subscribed = False  # indicates if API sent subscriptions to all data
-        self.to_stop = False
-
-        # symbols to use, make sure we have really a set of tuples
+        self.config: dict = config or {}
         self.mkt_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in mkt_symbols])
         self.trading_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in trading_symbols])
-        self.default_exchange = exchange
-        self.position_report_counter: Dict[Tuple[str, str], int] = dict()
-
+        self.exchange = exchange
+        # Algo callbacks to be called when object of specific class arrives from FIX queue
+        self.callbacks: Dict[str, Callable] = callbacks or {}
+        self.logger.info(
+            f"PhxApi callbacks for events: {list(self.callbacks.keys())}"
+        )
+        # parameters from configuration
+        self.queue_timeout = pd.Timedelta(self.config.get("queue_timeout", "00:00:10"))
+        # Rate Limiter setup
+        rate_limit_config = self.config.get("rate_limit_for_period", [(1, "1s")])
+        self.rate_limiter = MultiPeriodLimiter(rate_limit_config, self.logger)
+        self.logger.info(f"PhxApi Rate Limits:\n{self.rate_limiter}")
         # state variables used by algo to determine readiness for starting and stopping trading
+        # and next actions
         self.dependency_actions = PhxApi.get_init_dependency_actions()
-
-        # set from configuration
-        self.subscribe_for_position_updates = config.get("subscribe_for_position_updates", True)
-        self.subscribe_for_trade_capture_reports = config.get("subscribe_for_trade_capture_reports", True)
+        self.logged_in = False  # True if API logged into Phoenix FIX Bridge
+        self.subscribed = False  # indicates if API sent subscriptions to all data
+        self.to_stop = False  # When set to true - API stops and disconnects
+        # subscription flags set from configuration
+        self.subscribe_for_position_updates = self.config.get("subscribe_for_position_updates", True)
+        self.subscribe_for_trade_capture_reports = self.config.get("subscribe_for_trade_capture_reports", True)
         # TODO: check what compare_order_status can be used for
-        self.compare_order_status = config.get("compare_order_status", True)
-        self.cancel_orders_on_exit = config.get("cancel_orders_on_exit", True)
+        self.compare_order_status = self.config.get("compare_order_status", True)
+        self.cancel_orders_on_exit = self.config.get("cancel_orders_on_exit", True)
         self.use_mass_cancel_request = False  # Not ready yet
-        self.cancel_timeout_seconds = config.get("cancel_timeout_seconds", 5)
-        self.print_reports = config.get("print_reports", True)
+        self.cancel_timeout_seconds = self.config.get("cancel_timeout_seconds", 5)
+        self.print_reports = self.config.get("print_reports", True)
+        # tracking position, orders, reports etc
+        self.position_tracker = PositionTracker("local", True, self.logger)
+        self.order_tracker = OrderTracker("local", self.logger, self.position_tracker, self.print_reports)
+        self.position_report_counter: Dict[Tuple[str, str], int] = dict()
+        self.mass_status_exec_reports = []
+        # order books
+        self.order_books: Dict[Tuple[str, str], OrderBook] = {}
+        # security list
+        self.security_list: Dict[Tuple[str, str], Security] = {}
+
+        self.exception = None
         # Timers and threads
         self.timers_started = False
-        self.timer_interval = pd.Timedelta(config.get("timer_interval", "01:00:00"))
-        self.timer_alignment_freq = config.get("timer_alignment_freq", "1h")
+        self.timer_interval = pd.Timedelta(self.config.get("timer_interval", "01:00:00"))
+        self.timer_alignment_freq = self.config.get("timer_alignment_freq", "1h")
         self.recurring_timer = AlignedRepeatingTimer(
             self.timer_interval,
             self.on_timer,
@@ -108,18 +128,7 @@ class PhxApi(ApiInterface, abc.ABC):
             alignment_freq=self.timer_alignment_freq
         )
         self.run_thread = threading.Thread(name='RunApi', target=self.run, args=())
-        # tracking position and orders
-        self.position_tracker = PositionTracker("local", True, self.logger)
-        self.order_tracker = OrderTracker("local", self.logger, self.position_tracker, self.print_reports)
-        # order books
-        self.order_books: Dict[Tuple[str, str], OrderBook] = {}
-        # security list
-        self.security_list: Dict[Tuple[str, str], Security] = {}
-
-        self.exception = None
-
-        # collecting the reports of a mass status requests
-        self.mass_status_exec_reports = []
+        # STARTS INTERNAL THREADS
         self.start_threads()
 
     @staticmethod
@@ -132,6 +141,10 @@ class PhxApi(ApiInterface, abc.ABC):
             DependencyAction.SECURITY_REPORTS: [],
         }
 
+    def register_callback(self, msg_type: str, callback: Callable):
+        self.callbacks[msg_type] = callback
+        self.logger.info(f"register_callback {msg_type=}:{callback=}")
+
     def run(self):
         self.app_runner.start()
         self.dispatch()
@@ -141,47 +154,54 @@ class PhxApi(ApiInterface, abc.ABC):
             try:
                 # blocking here and wait for next message until timeout
                 msg = self.message_queue.get(timeout=self.queue_timeout.total_seconds())
-
-                if isinstance(msg, OrderBookUpdate):
-                    self.on_order_book_update(msg)
-                elif isinstance(msg, Trades):
-                    self.on_trades(msg)
-                elif isinstance(msg, ExecReport):
-                    self.on_exec_report(msg)
-                elif isinstance(msg, TradeCaptureReport):
-                    self.on_trade_capture_report(msg)
-                elif isinstance(msg, PositionReports):
-                    self.on_position_reports(msg)
-                elif isinstance(msg, Heartbeat):
-                    self.on_heartbeat(msg)
-                elif isinstance(msg, OrderMassCancelReport):
-                    self.on_order_mass_cancel_report(msg)
-                elif isinstance(msg, Reject):
-                    self.on_reject(msg)
-                elif isinstance(msg, BusinessMessageReject):
-                    self.on_business_message_reject(msg)
-                elif isinstance(msg, MarketDataRequestReject):
-                    self.on_market_data_request_reject(msg)
-                elif isinstance(msg, OrderBookSnapshot):
-                    self.on_order_book_snapshot(msg)
-                elif isinstance(msg, SecurityReport):
-                    self.on_security_report(msg)
-                elif isinstance(msg, PositionRequestAck):
-                    self.on_position_request_ack(msg)
-                elif isinstance(msg, TradeCaptureReportRequestAck):
-                    self.on_trade_capture_report_request_ack(msg)
-                elif isinstance(msg, NotConnected):
-                    self.on_connection_error(msg)
-                elif isinstance(msg, GatewayNotReady):
-                    self.on_connection_error(msg)
-                elif isinstance(msg, Logon):
-                    self.on_logon(msg)
-                elif isinstance(msg, Logout):
-                    self.on_logout(msg)
-                elif isinstance(msg, Create):
-                    self.on_create(msg)
-                else:
-                    self.logger.info(f"unknown message {msg}")
+                # first check if to call client's callback
+                msg_class_name = type(msg).__name__
+                if msg_class_name in self.callbacks:
+                    self.callbacks[msg_class_name](msg, self.logger)
+                # call internal handler
+                match msg:
+                    case OrderBookUpdate():
+                        self.on_order_book_update(msg)
+                    case Trades():
+                        self.on_trades(msg)
+                    case ExecReport():
+                        self.on_exec_report(msg)
+                    case TradeCaptureReport():
+                        self.on_trade_capture_report(msg)
+                    case PositionReports():
+                        self.on_position_reports(msg)
+                    case Heartbeat():
+                        self.on_heartbeat(msg)
+                    case OrderMassCancelReport():
+                        self.on_order_mass_cancel_report(msg)
+                    case Reject():
+                        self.on_reject(msg)
+                    case BusinessMessageReject():
+                        self.on_business_message_reject(msg)
+                    case MarketDataRequestReject():
+                        self.on_market_data_request_reject(msg)
+                    case OrderCancelReject():
+                        self.on_order_cancel_reject(msg)
+                    case OrderBookSnapshot():
+                        self.on_order_book_snapshot(msg)
+                    case SecurityReport():
+                        self.on_security_report(msg)
+                    case PositionRequestAck():
+                        self.on_position_request_ack(msg)
+                    case TradeCaptureReportRequestAck():
+                        self.on_trade_capture_report_request_ack(msg)
+                    case NotConnected():
+                        self.on_connection_error(msg)
+                    case GatewayNotReady():
+                        self.on_connection_error(msg)
+                    case Logon():
+                        self.on_logon(msg)
+                    case Logout():
+                        self.on_logout(msg)
+                    case Create():
+                        self.on_create(msg)
+                    case _:
+                        self.logger.warning(f"unknown message type:{type(msg).__name__} {msg=}")
             except queue.Empty:
                 self.exception = TimeoutError(
                     f"queue empty after waiting {self.queue_timeout.total_seconds()}s"
@@ -234,23 +254,33 @@ class PhxApi(ApiInterface, abc.ABC):
             self.subscribe_trade_capture_reports()
         self.subscribed = True
 
-    def cancel_all_order(self):
-        for (ord_id, order) in self.order_tracker.open_orders.items():
-            msg = self.fix_interface.order_cancel_request(order)
-            self.logger.info(f"order cancel request {fix_message_string(msg)}")
-
-    def stop_api(self):
+    def stop_api(self) -> None:
         fn = sys._getframe().f_code.co_name
+        max_process_time_secs = 10
         if self.logged_in and self.cancel_orders_on_exit:
-            self.logger.info(f"{fn} cancelling orders on exit")
+            self.logger.info(
+                f"{fn} cancelling {len(self.order_tracker.open_orders)} orders on exit")
             if self.use_mass_cancel_request:
                 for (exchange, symbol) in self.trading_symbols:
-                    msg = self.fix_interface.order_mass_cancel_request(exchange, symbol)
-                    self.logger.info(f"{fn} order mass cancel request {msg}")
+                    if self.rate_limiter.has_capacity(dt_now_utc(), 1):
+                        self.rate_limiter.consume(dt_now_utc())
+                        msg = self.fix_interface.order_mass_cancel_request(exchange, symbol)
+                        self.logger.info(f"{fn} order mass cancel request {msg}")
+                    else:
+                        self.logger.info(
+                            f"{fn} no rate limit capacity. Try again later."
+                        )
             else:
                 for (ord_id, order) in self.order_tracker.open_orders.items():
-                    order, msg = self.fix_interface.order_cancel_request(order)
-                    self.logger.info(f"{fn} order cancel request {fix_message_string(msg)}")
+                    if self.rate_limiter.has_capacity(dt_now_utc(), 1):
+                        self.rate_limiter.consume(dt_now_utc())
+                        order, msg = self.fix_interface.order_cancel_request(order)
+                        self.logger.info(f"{fn} order cancel request {fix_message_string(msg)}")
+                    else:
+                        self.logger.info(
+                            f"{fn} no rate limit capacity. Try again later."
+                        )
+                        break
         else:
             self.logger.info(f"{fn} keep orders alive on exit")
 
@@ -300,9 +330,9 @@ class PhxApi(ApiInterface, abc.ABC):
     def request_position_snapshot(self):
         # note that the same account alias has to be used for all the connected exchanges
         account = self.fix_interface.get_account()
-        self.logger.info(f"====> requesting position snapshot for account {account} on {self.default_exchange}...")
+        self.logger.info(f"====> requesting position snapshot for account {account} on {self.exchange}...")
         msg = self.fix_interface.request_for_positions(
-            self.default_exchange,
+            self.exchange,
             account=account,
             pos_req_id=f"pos_{self.fix_interface.generate_msg_id()}",
             subscription_type=fix.SubscriptionRequestType_SNAPSHOT
@@ -390,6 +420,18 @@ class PhxApi(ApiInterface, abc.ABC):
     def on_market_data_request_reject(self, msg: MarketDataRequestReject):
         self.logger.error(f"on_market_data_request_reject: {msg}")
 
+    def on_order_cancel_reject(self, msg: OrderCancelReject):
+        fn = "on_order_cancel_reject"
+        self.logger.info(f"{fn} {str(msg)=}")
+        if (
+            "not_found" in msg.text
+            or "NOT FOUND" in msg.text
+            or "Too late to cancel" in msg.reason
+        ):
+            self.logger.warning(f"{fn} Order Cancel Rejected with {msg=}. Remove order.")
+            success = self.order_tracker.remove_order(msg.ord_id, msg.orig_cl_ord_id)
+            self.logger.info(f"{fn} remove order results:{success}")
+
     def on_security_report(self, msg: SecurityReport):
         exchanges = set([security.exchange for security in msg.securities.values()])
         for security in msg.securities.values():
@@ -407,12 +449,12 @@ class PhxApi(ApiInterface, abc.ABC):
         # indicate that API received positions snapshot
         for report in msg.reports:
             if not report.exchange:
-                report.exchange = self.default_exchange
+                report.exchange = self.exchange
         self.position_tracker.set_snapshots(
-            msg.reports,
-            utcnow(),
+            reports=msg.reports,
+            last_update_time=utcnow(),
             overwrite=True,
-            default_exchange=self.default_exchange,
+            default_exchange=self.exchange,
         )
         for report in msg.reports:
             if (
@@ -436,11 +478,19 @@ class PhxApi(ApiInterface, abc.ABC):
             )
 
     def on_exec_report(self, msg: ExecReport):
+        fn = "on_exec_report"
+        self.logger.info(
+            f"{fn} msg:\n{msg}"
+        )
         if msg.exec_type == "I":
             if msg.ord_status == fix.OrdStatus_REJECTED:
                 self.on_mass_status_exec_report(MassStatusExecReportNoOrders(msg.exchange, msg.symbol, msg.text))
             elif msg.is_mass_status:
-                assert msg.tot_num_reports is not None
+                if msg.tot_num_reports is None:
+                    self.logger.error(
+                        f"{fn} invalid tot_num_reports in {msg=}"
+                    )
+                    return
                 self.mass_status_exec_reports.append(msg)
                 if len(self.mass_status_exec_reports) == msg.tot_num_reports and msg.last_rpt_requested:
                     self.on_mass_status_exec_report(MassStatusExecReport(self.mass_status_exec_reports))
@@ -453,10 +503,15 @@ class PhxApi(ApiInterface, abc.ABC):
             num_open_orders_before = len(self.order_tracker.open_orders)
             self.order_tracker.process(msg, utcnow())
             # if we canceled all open orders -> store the fix message history
-            if self.to_stop and num_open_orders_before and not self.order_tracker.open_orders:
-                self.logger.info(f"<==== all open orders cancelled")
+            if (
+                self.to_stop
+                and num_open_orders_before
+                and not self.order_tracker.open_orders
+                and self.config.get("save_before_exit", True)
+            ):
+                self.logger.info(f"{fn} <==== all open orders cancelled")
                 self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
-                self.logger.info(f"<==== FIX message history saved")
+                self.logger.info(f"{fn} <==== FIX message history saved")
 
     def on_status_exec_report(self, msg: ExecReport):
         if self.print_reports:
@@ -481,7 +536,7 @@ class PhxApi(ApiInterface, abc.ABC):
                 f"\nhistorical orders:"
                 f"\n{Order.tabulate(self.order_tracker.history_orders)}"
             )
-            for ticker in msg.keys():
+            for ticker in self.trading_symbols:
                 if ticker not in self.dependency_actions[DependencyAction.WORKING_ORDERS]:
                     self.dependency_actions[DependencyAction.WORKING_ORDERS].append(ticker)
         elif isinstance(msg, MassStatusExecReportNoOrders):
@@ -508,7 +563,7 @@ class PhxApi(ApiInterface, abc.ABC):
 
     def on_order_book_snapshot(self, msg: OrderBookSnapshot):
         ticker = msg.key()
-        self.logger.info(f"on_order_book_snapshot: {ticker}")
+        self.logger.info(f"on_order_book_snapshot: {ticker} \n{str(msg)}")
         if ticker not in self.dependency_actions[DependencyAction.ORDERBOOK_SNAPSHOTS]:
             self.dependency_actions[DependencyAction.ORDERBOOK_SNAPSHOTS].append(ticker)
         self.order_books[ticker] = OrderBook(
@@ -516,6 +571,10 @@ class PhxApi(ApiInterface, abc.ABC):
         )
 
     def on_order_book_update(self, msg: OrderBookUpdate):
+        self.logger.debug(
+            f"on_order_book_update: ticker:{msg.key()}"
+            f" updates:{msg.updates}"
+        )
         book = self.order_books.get(msg.key(), None)
         if book is not None:
             for price, quantity, is_bid in msg.updates:

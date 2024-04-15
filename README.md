@@ -39,7 +39,6 @@ pip3 install -r requirements.txt
 Note that `requirements.txt` does not install QuickFix for macOS with arm64 architecture
 as the current QuickFix version 1.15.1 has some issues and requires a patch. 
 
-
 ## Custom Build QuickFix for arm64 on macOS 
 
 Building QuickFix for Apple arm64 requires a patch. The following script
@@ -89,6 +88,21 @@ Lower right corner in PyCharm choose "Python Interpreter". Then
 
 PyCharm can also be configured for Remote Development. This allows to run the project on the server,
 while using PyCharm client.
+
+## Testing PhxFix API
+Example of simple strategy using API is in `phx-fix-base/examples/deribit_strategy`.
+To ensure that your code can import `phx-fix-bases` modules. your environment should have:
+```bash
+export PYTHONPATH="<path-to-phx-fix-base>/src:${PYTHONPATH}"
+```
+
+Run example:
+```bash
+# Ensure your conda environment is activated
+% cd examples/deribit_strategy
+% python3 main.py
+```
+Log files are written under `temp` sub-folder.
 
 ## User Installation
 1. Download `phx-fix-base` project with

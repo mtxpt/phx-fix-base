@@ -41,7 +41,7 @@ if __name__ == "__main__":
         account="T1",
         socket_connect_port="1238",
         socket_connect_host="127.0.0.1",
-        fix_schema_dict=fix_schema_file()
+        fix_schema_dict=fix_schema_file(),
     )
     fix_session_settings = fix_configs.get_fix_session_settings()
     app = App(message_queue, fix_session_settings, logger, export_dir)
