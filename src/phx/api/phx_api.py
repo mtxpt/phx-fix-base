@@ -1,6 +1,7 @@
 import abc
 import queue
 import threading
+import time
 from enum import Enum
 from logging import Logger
 from typing import Any, Callable, List, Set, Dict, Tuple, Union, Optional
@@ -111,14 +112,14 @@ class PhxApi(ApiInterface, abc.ABC):
         # tracking position, orders, reports etc
         self.position_tracker = PositionTracker("local", True, self.logger)
         self.order_tracker = OrderTracker("local", self.logger, self.position_tracker, self.print_reports)
-        self.position_report_counter: Dict[Tuple[str, str], int] = dict()
+        self.position_report_counter: Dict[Ticker, int] = dict()
         self.mass_status_exec_reports = []
 
         # order books
-        self.order_books: Dict[Tuple[str, str], OrderBook] = {}
+        self.order_books: Dict[Ticker, OrderBook] = {}
 
         # security list
-        self.security_list: Dict[Tuple[str, str], Security] = {}
+        self.security_list: Dict[Ticker, Security] = {}
 
         # timers and threads
         self.timers_started = False
@@ -132,8 +133,12 @@ class PhxApi(ApiInterface, abc.ABC):
         )
         self.run_thread = threading.Thread(name='RunApi', target=self.run, args=())
 
-        # start the internal threads
+        # exception and restart
         self.exception = None
+        self.to_restart = False
+        self.timeout_before_restart_in_seconds = self.config.get("timeout_before_restart", 240)
+        # Gateway might take up to 4 mins to restart.
+
         self.start_threads()
 
     @staticmethod
@@ -150,11 +155,19 @@ class PhxApi(ApiInterface, abc.ABC):
         self.callbacks[msg_type] = callback
         self.logger.info(f"register_callback {msg_type=}:{callback=}")
 
-    def run(self):
+    def run_once(self):
         self.app_runner.start()
-        self.dispatch()
+        run_again = self.dispatch()
+        return run_again
 
-    def dispatch(self):
+    def run(self):
+        run_again = self.run_once()
+        while run_again:
+            time.sleep(self.timeout_before_restart_in_seconds)
+            self.logger.info(f"Timeout of {self.timeout_before_restart_in_seconds}s before restarting...")
+            run_again = self.run_once()
+
+    def dispatch(self) -> bool:
         while not self.is_finished():
             try:
                 # blocking here and wait for next message until timeout
@@ -225,21 +238,32 @@ class PhxApi(ApiInterface, abc.ABC):
                 self.exec_state_evaluation()
         self.logger.info("dispatch loop terminated")
         try:
-            self.stop_threads()
+            if not self.to_restart:
+                self.stop_timer_thread()
+            elif self.app_runner.is_fix_session_up:
+                # Shut down app runner but do not stop timer thread
+                self.logger.info("Stopping app runner forcefully for restart ...")
+                self.app_runner.stop()
             self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
         except Exception as e:
             self.logger.exception(f"failed to save fix message history: {e}")
+
+        if self.to_restart:
+            self.to_restart = False   # reset variable to False before a new run
+            return True
+        else:
+            return False
 
     def exec_state_evaluation(self):
         fn = self.exec_state_evaluation.__name__
         if self.to_stop and not self.is_ready_to_disconnect():
             # algo set to_stop=True but still open orders
             self.logger.info(f"{fn}: {self.to_stop=} and {self.is_ready_to_disconnect()=}. Stopping...")
-            self.stop_api()
-        elif self.is_ready_to_disconnect() and not self.is_finished():
+            self.teardown_open_orders()
+        elif self.is_ready_to_disconnect() and self.logged_in:
             self.logger.info(
                 f"{fn}: {self.is_ready_to_disconnect()=} and "
-                f"{self.is_finished()=} and {self.app_runner.is_fix_session_up=}."
+                f"{self.app_runner.is_fix_session_up=}."
             )
             if self.app_runner.is_fix_session_up:
                 self.logger.info("Stop app_runner...")
@@ -249,6 +273,10 @@ class PhxApi(ApiInterface, abc.ABC):
         elif self.logged_in and not self.subscribed:
             self.logger.info(f"{fn}: {self.logged_in=} and {self.subscribed:=}. Subscribe...")
             self.subscribe()
+        elif not self.logged_in and not self.to_stop:
+            # unexpected logout
+            self.logger.info(f"{fn}: {self.logged_in=} and {self.to_stop:=}. Unexpected logout, Restarting app runner...")
+            self.to_restart = True
 
     def subscribe(self):
         self.request_security_data()
@@ -261,8 +289,8 @@ class PhxApi(ApiInterface, abc.ABC):
             self.subscribe_trade_capture_reports()
         self.subscribed = True
 
-    def stop_api(self) -> None:
-        fn = self.stop_api.__name__
+    def teardown_open_orders(self) -> None:
+        fn = self.teardown_open_orders.__name__
         if self.logged_in and self.cancel_orders_on_exit:
             self.logger.info(
                 f"{fn} cancelling {len(self.order_tracker.open_orders)} orders on exit")
@@ -303,7 +331,7 @@ class PhxApi(ApiInterface, abc.ABC):
     def is_finished(self) -> bool:
         # returns True if API stopped, cancelled open orders and logged out
         # means algo can exit now
-        return self.is_ready_to_disconnect() and not self.logged_in
+        return (self.is_ready_to_disconnect() and not self.logged_in) or self.to_restart
 
     def request_security_data(self):
         self.logger.info(f"====> requesting security list...")
@@ -376,7 +404,7 @@ class PhxApi(ApiInterface, abc.ABC):
         self.run_thread.start()
         self.timers_started = True
 
-    def stop_threads(self):
+    def stop_timer_thread(self):
         if self.timers_started:
             self.logger.info(f"stopping threads...")
             if self.recurring_timer.is_alive():
