@@ -98,7 +98,7 @@ The package can be added to the `requirements.txt` through a
 
 ```
 # Phoenix Prime FIX foundation package
-phx-fix-base @ git+https://github.com/mtxpt/phx-fix-base.git@master
+phx-fix-base @ git+https://github.com/mtxpt/phx-fix-base.git@main
 ```
 
 
