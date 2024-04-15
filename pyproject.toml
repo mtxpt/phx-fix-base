@@ -6,11 +6,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["phx.fix", "phx.fix.app", "phx.fix.model", "phx.fix.tracker", "phx.fix.utils", "phx.utils", "phx.api"]
+include = ["phx.api", "phx.fix", "phx.fix.app", "phx.fix.model", "phx.fix.tracker", "phx.fix.utils", "phx.utils"]
 
 [project]
 name = "phx-fix-base"
-description = "Phoenix Prime FIX base functionality"
+description = "Phoenix Prime FIX foundation package"
 version = "1.0"
 readme = "README.md"
 license = {file = "LICENSE"}

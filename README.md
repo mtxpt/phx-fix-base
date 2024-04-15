@@ -1,7 +1,7 @@
 # Phoenix Prime FIX Foundation Package 
 
 This repository provides the foundations for FIX based trading applications based on the widely used 
-[QuickFix](https://quickfixengine.org) open source library and its application framework. 
+[QuickFIX](https://QuickFIXengine.org) open source library and its application framework. 
 
 A simplistic FIX client implementing a fully fledged trading strategy building on this foundation package 
 can be found in this [repository](https://github.com/mtxpt/phx-fix-examples).
@@ -11,7 +11,7 @@ can be found in this [repository](https://github.com/mtxpt/phx-fix-examples).
 
 The project requires
   - Python >= 3.11
-  - QuickFix >= 1.15.1
+  - QuickFIX >= 1.15.1
   - Dependencies as listed in `requirements.txt`
 
 
@@ -26,7 +26,7 @@ to remove existing environment and rebuild all.
 scripts/setup_all.sh [clean]
 ```
 
-Note that `setup_all.sh` also builds a custom QuickFix version for `arm64` architecture. 
+Note that `setup_all.sh` also builds a custom QuickFIX version for `arm64` architecture. 
 
 Alternatively a Python environment can be created and the `requirements.txt` can 
 be installed directly as follows 
@@ -35,21 +35,21 @@ be installed directly as follows
 pip3 install -r requirements.txt
 ```
 
-Note that `requirements.txt` does not install QuickFix for macOS with arm64 architecture
-as the current QuickFix version 1.15.1 has some issues and requires a patch. 
+Note that `requirements.txt` does not install QuickFIX for macOS with arm64 architecture
+as the current QuickFIX version 1.15.1 has some issues and requires a patch. 
 
 
 ## QuickFIX 
 
-This project depends on [QuickFIX](http://www.quickfixengine.org/). Check their [license agreement](http://www.quickfixengine.org/LICENSE) for licensing information.
+This project depends on [QuickFIX](http://www.QuickFIXengine.org/). Check their [license agreement](http://www.QuickFIXengine.org/LICENSE) for licensing information.
 
-### Custom Build QuickFix for arm64 on macOS 
+### Custom Build QuickFIX for arm64 on macOS 
 
-Building QuickFix for Apple arm64 requires a patch. The following script
-automates the patch and builds QuickFix for `arm64` from source:
+Building QuickFIX for Apple arm64 requires a patch. The following script
+automates the patch and builds QuickFIX for `arm64` from source:
 
 ```
-scripts/build_quickfix_arm64.sh
+scripts/build_QuickFIX_arm64.sh
 ```
 
 If you use `setup_all.sh` you don't have to execute this build step as it is handled by `setup_all.sh` as well.
@@ -57,7 +57,7 @@ If you use `setup_all.sh` you don't have to execute this build step as it is han
 ### Installing QuicFix on Windows
 
 The Python QuickFIX bindings also fail to install on Windows. Fortunately, for Windows there are 
-[prebuilt wheel packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/#quickfix). 
+[prebuilt wheel packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/#QuickFIX). 
 
 To set up the Python environment using Conda follow these steps:
 
@@ -65,14 +65,14 @@ To set up the Python environment using Conda follow these steps:
   - Create a new environment with `conda create --name phx python=3.11`
   - Activate the environment
   - Install all dependencies first `pip install -r requirements.txt` 
-  - Download the QuickFix wheel `quickfix‑1.15.1‑cp39‑cp39‑win_amd64.whl`
-  - Install the wheel `pip install quickfix‑1.15.1‑cp39‑cp39‑win_amd64.whl`
-  - List packages and check if `quickfix 1.15.1` shows up `conda list`
+  - Download the QuickFIX wheel `QuickFIX‑1.15.1‑cp39‑cp39‑win_amd64.whl`
+  - Install the wheel `pip install QuickFIX‑1.15.1‑cp39‑cp39‑win_amd64.whl`
+  - List packages and check if `QuickFIX 1.15.1` shows up `conda list`
 
 Note that during the execution of `pip install -r requirements.txt` you should first see
 
 ```
-Ignoring quickfix: markers 'platform_machine != "arm64" and sys_platform != "win32"' don't match your environment
+Ignoring QuickFIX: markers 'platform_machine != "arm64" and sys_platform != "win32"' don't match your environment
 ```
 
 
@@ -129,7 +129,8 @@ or want to contribute code or config files, don't hesitate to use the
 
 ## License
 
-The Phoenix Prime FIX Foundation Library is released under the [BSD 3-Clause License](LICENSE).
+The __Phoenix Prime FIX Foundation Package__ is released under the 
+[BSD 3-Clause License](LICENSE).
 
 
 
