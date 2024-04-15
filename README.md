@@ -18,11 +18,10 @@ The project requires
 
 ## Developer Installation 
 
-It is highly recommended to create a new Python environment.
-
-On Linux or MacOs the script`scripts/setup_all.sh` automates the creation of a 
-conda based environment with all dependencies installed. Optionally provide the 
-argument `clean` to remove existing environment and rebuild all. 
+It is highly recommended to create a new Python environment. On Linux or MacOs the script
+`scripts/setup_all.sh` automates the creation of a [conda](https://docs.conda.io/en/latest/) 
+based environment with all dependencies installed. Optionally provide the argument `clean` 
+to remove existing environment and rebuild all. 
 
 ```
 scripts/setup_all.sh [clean]
@@ -39,6 +38,7 @@ pip3 install -r requirements.txt
 
 Note that `requirements.txt` does not install QuickFix for macOS with arm64 architecture
 as the current QuickFix version 1.15.1 has some issues and requires a patch. 
+
 
 ## Custom Build QuickFix for arm64 on macOS 
 
@@ -107,6 +107,7 @@ source folder and the `tests` directory as test folder.
   ```
  - Import `phx-fix-base` modules into your code and use them. 
    For example see`<phx-fix-base>/tests/test_base_strategy`
+
 
 ## Developer Notes
 
