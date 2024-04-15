@@ -91,25 +91,6 @@ Next navigate to `Settings` -> `Project` -> `Project Structure` and configure th
 source folder and the `tests` directory as test folder. 
 
 
-## Testing PhxFix API
-
-Example of simple strategy using API is in `phx-fix-base/examples/deribit_strategy`.
-To ensure that your code can import `phx-fix-bases` modules your environment should have
-
-``` 
-export PYTHONPATH="<path-to-phx-fix-base>/src:${PYTHONPATH}"
-```
-
-Run the example from the command line:
-
-```bash
-# Ensure your conda environment is activated
-cd examples/deribit_strategy
-python3 main.py
-```
-
-Log files are written to the `temp` sub-folder.
-
 ## User Installation
 
  - Download `phx-fix-base` project with
@@ -128,6 +109,16 @@ Log files are written to the `temp` sub-folder.
    For example see`<phx-fix-base>/tests/test_base_strategy`
 
 ## Developer Notes
+
+We appreciate feedback and contributions. If you have feature requests, questions, 
+or want to contribute code or config files, don't hesitate to use the 
+[GitHub issue tracker](https://github.com/mtxpt/phx-fix-base/issues).
+
+
+## License
+
+The Phoenix Prime FIX Foundation Library is released under the [BSD 3-Clause License](LICENSE).
+
 
 
 
