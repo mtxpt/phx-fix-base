@@ -133,6 +133,10 @@ class PhxApi(ApiInterface, abc.ABC):
         )
         self.run_thread = threading.Thread(name='RunApi', target=self.run, args=())
 
+        # disconnection timeout
+        self.disconnection_timeout = pd.Timedelta(self.config.get("login_timeout", "00:00:10"))
+        self.disconnection_start_time: Optional[pd.Timestamp] = None
+
         # exception and restart
         self.exception = None
         self.to_restart = False
@@ -249,7 +253,9 @@ class PhxApi(ApiInterface, abc.ABC):
             self.logger.exception(f"failed to save fix message history: {e}")
 
         if self.to_restart:
-            self.to_restart = False   # reset variable to False before a new run
+            # reset variables related to restart before a new run
+            self.to_restart = False
+            self.disconnection_start_time = None
             return True
         else:
             return False
@@ -275,8 +281,12 @@ class PhxApi(ApiInterface, abc.ABC):
             self.subscribe()
         elif not self.logged_in and not self.to_stop:
             # unexpected logout
-            self.logger.info(f"{fn}: {self.logged_in=} and {self.to_stop:=}. Unexpected logout, Restarting app runner...")
-            self.to_restart = True
+            if self.disconnection_start_time is None:
+                self.disconnection_start_time = pd.Timestamp.now()
+            elif self.disconnection_start_time + self.disconnection_timeout < pd.Timestamp.now():
+                self.logger.info(f"{fn}: {self.logged_in=} and {self.to_stop:=}. "
+                                 f"Unexpected logout, Restarting app runner after {self.disconnection_timeout.total_seconds()}s...")
+                self.to_restart = True
 
     def subscribe(self):
         self.request_security_data()
