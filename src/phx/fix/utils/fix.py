@@ -482,7 +482,8 @@ def dict_to_fix_dict(d: dict) -> fix.Dictionary:
     return fd
 
 
-def fix_session_default_config(file_log_path="./logs/") -> dict:
+def fix_session_default_config(file_log_path="./logs/", start_time="00:00:00", end_time="00:00:00") -> dict:
+
     """
     Settings that apply to all the sessions
     """
@@ -490,8 +491,8 @@ def fix_session_default_config(file_log_path="./logs/") -> dict:
         "DefaultApplVerID": "FIX.4.4",
         "ConnectionType": "initiator",
         "FileLogPath": file_log_path,
-        "StartTime": "00:00:00",
-        "EndTime": "00:00:00",
+        "StartTime": start_time,
+        "EndTime": end_time,
         "NonStopSession": "N",
         "UseDataDictionary": "Y",
         "ReconnectInterval": 60,
