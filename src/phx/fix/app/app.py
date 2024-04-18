@@ -1013,7 +1013,9 @@ class App(fix.Application, FixInterface):
         self.send_message_to_session(message)
         return message
 
-    def security_list_request(self, req_id="req_id") -> fix.Message:
+    def security_list_request(self, req_id="req_id", exchange: str = None,
+                              subscription_request_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
+                              security_list_request_type=fix.SecurityListRequestType_ALL_SECURITIES) -> fix.Message:
         """
         Send security list request
         """
@@ -1023,9 +1025,13 @@ class App(fix.Application, FixInterface):
         snd_time = fix.SendingTime()
         snd_time.setString(datetime.utcnow().strftime("%Y%m%d-%H:%M:%S.%f")[:-3])
         message.setField(snd_time)
-        message.setField(fix.SubscriptionRequestType(fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES))
+        if exchange is not None:
+            message.setField(fix.SecurityExchange(exchange))
+        if subscription_request_type is not None:
+            message.setField(fix.SubscriptionRequestType(subscription_request_type))
         message.setField(fix.SecurityReqID(f"{req_id}_{self.next_request_id()}"))
-        message.setField(fix.SecurityListRequestType(fix.SecurityListRequestType_ALL_SECURITIES))
+        if security_list_request_type is not None:
+            message.setField(fix.SecurityListRequestType(security_list_request_type))
         self.send_message_to_session(message)
         return message
 
