@@ -111,6 +111,8 @@ class FixSessionConfig(object):
             socket_connect_host="127.0.0.1",
             data_dir=None,
             fix_schema_dict: str = None,
+            start_time="00:00:00",
+            end_time="00:00:00",
             root=None
     ):
         self.sender_comp_id = sender_comp_id
@@ -131,7 +133,7 @@ class FixSessionConfig(object):
         self.settings = fix.SessionSettings()
         self.settings.set(
             dict_to_fix_dict(
-                fix_session_default_config(self.log_dir)
+                fix_session_default_config(self.log_dir, start_time, end_time)
             )
         )
 

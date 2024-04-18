@@ -111,14 +111,14 @@ class PhxApi(ApiInterface, abc.ABC):
         # tracking position, orders, reports etc
         self.position_tracker = PositionTracker("local", True, self.logger)
         self.order_tracker = OrderTracker("local", self.logger, self.position_tracker, self.print_reports)
-        self.position_report_counter: Dict[Tuple[str, str], int] = dict()
+        self.position_report_counter: Dict[Ticker, int] = dict()
         self.mass_status_exec_reports = []
 
         # order books
-        self.order_books: Dict[Tuple[str, str], OrderBook] = {}
+        self.order_books: Dict[Ticker, OrderBook] = {}
 
         # security list
-        self.security_list: Dict[Tuple[str, str], Security] = {}
+        self.security_list: Dict[Ticker, Security] = {}
 
         # timers and threads
         self.timers_started = False
@@ -225,7 +225,7 @@ class PhxApi(ApiInterface, abc.ABC):
                 self.exec_state_evaluation()
         self.logger.info("dispatch loop terminated")
         try:
-            self.stop_threads()
+            self.stop_timer_thread()
             self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
         except Exception as e:
             self.logger.exception(f"failed to save fix message history: {e}")
@@ -235,7 +235,7 @@ class PhxApi(ApiInterface, abc.ABC):
         if self.to_stop and not self.is_ready_to_disconnect():
             # algo set to_stop=True but still open orders
             self.logger.info(f"{fn}: {self.to_stop=} and {self.is_ready_to_disconnect()=}. Stopping...")
-            self.stop_api()
+            self.teardown_open_orders()
         elif self.is_ready_to_disconnect() and not self.is_finished():
             self.logger.info(
                 f"{fn}: {self.is_ready_to_disconnect()=} and "
@@ -261,8 +261,8 @@ class PhxApi(ApiInterface, abc.ABC):
             self.subscribe_trade_capture_reports()
         self.subscribed = True
 
-    def stop_api(self) -> None:
-        fn = self.stop_api.__name__
+    def teardown_open_orders(self) -> None:
+        fn = self.teardown_open_orders.__name__
         if self.logged_in and self.cancel_orders_on_exit:
             self.logger.info(
                 f"{fn} cancelling {len(self.order_tracker.open_orders)} orders on exit")
@@ -376,7 +376,7 @@ class PhxApi(ApiInterface, abc.ABC):
         self.run_thread.start()
         self.timers_started = True
 
-    def stop_threads(self):
+    def stop_timer_thread(self):
         if self.timers_started:
             self.logger.info(f"stopping threads...")
             if self.recurring_timer.is_alive():
