@@ -28,7 +28,7 @@ class ApiInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def stop_api(self):
+    def teardown_open_orders(self):
         pass
 
     @abc.abstractmethod
@@ -64,7 +64,7 @@ class ApiInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def stop_threads(self):
+    def stop_timer_thread(self):
         pass
 
     @abc.abstractmethod
