@@ -36,9 +36,7 @@ class OrderTrackerBase(object):
         self.snapshots_obtained = False
 
     @abc.abstractmethod
-    def process(self, report: ExecReport, sending_time) -> Union[
-        Tuple[Optional[Order], int, ExecReport, Optional[str]], Union[ExecReport, List[ExecReport]]
-    ]:
+    def process(self, report: ExecReport, sending_time) -> Tuple[Optional[Order], Optional[str]]:
         pass
 
     def purge_history(self):
@@ -216,6 +214,8 @@ class OrderTracker(OrderTrackerBase):
 
                 # store it but do not remove it as it is still active but failed to be updated
                 self.rejected_open_orders[report.ord_id] = order
+                if order.ord_status == fix.OrdStatus_PENDING_NEW:
+                    del self.open_orders[report.cl_ord_id]
 
             if order is None:
                 error = (
