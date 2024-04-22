@@ -7,6 +7,7 @@ from typing import Any, Callable, List, Set, Dict, Tuple, Union, Optional
 
 import pandas as pd
 import quickfix as fix
+import eventkit as ev
 
 from phx.api import ApiInterface, Ticker
 from phx.fix.app.app_runner import AppRunner
@@ -113,6 +114,9 @@ class PhxApi(ApiInterface, abc.ABC):
         self.order_tracker = OrderTracker("local", self.logger, self.position_tracker, self.print_reports)
         self.position_report_counter: Dict[Ticker, int] = dict()
         self.mass_status_exec_reports = []
+
+        # events for order updates
+        self.on_order_update_event = ev.Event()
 
         # order books
         self.order_books: Dict[Ticker, OrderBook] = {}
@@ -505,11 +509,12 @@ class PhxApi(ApiInterface, abc.ABC):
                     self.mass_status_exec_reports = []
             else:
                 self.on_status_exec_report(msg)
-        elif msg.exec_type == fix.ExecType_REJECTED or msg.ord_status == fix.OrdStatus_REJECTED:
+        elif msg.exec_type == fix.ExecType_REJECTED:
             self.on_reject_exec_report(msg)
         else:
             num_open_orders_before = len(self.order_tracker.open_orders)
-            self.order_tracker.process(msg, utcnow())
+            order, error = self.order_tracker.process(msg, utcnow())
+            self.on_order_update_event.emit(order)
             # if we canceled all open orders -> store the fix message history
             if (
                 self.to_stop
