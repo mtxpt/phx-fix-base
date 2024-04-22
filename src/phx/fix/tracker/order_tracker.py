@@ -214,7 +214,8 @@ class OrderTracker(OrderTrackerBase):
 
                 # store it but do not remove it as it is still active but failed to be updated
                 self.rejected_open_orders[report.ord_id] = order
-                del self.open_orders[report.cl_ord_id]
+                if order.ord_status == fix.OrdStatus_PENDING_NEW:
+                    del self.open_orders[report.cl_ord_id]
 
             if order is None:
                 error = (
