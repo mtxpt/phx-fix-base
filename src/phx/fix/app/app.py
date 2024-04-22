@@ -1053,7 +1053,9 @@ class App(fix.Application, FixInterface):
         return message
 
     def market_data_request(
-            self, exchange_symbol_pairs, market_depth=0,
+            # exchange_symbol_pairs is list of tuple , tuple[0] is string of exchange name , and tuple[1] is string
+            # of symbol
+            self, exchange_symbol_pairs: List[Tuple[str, str]], market_depth=0,
             content="both", req_id=None,
             subscription_request_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
