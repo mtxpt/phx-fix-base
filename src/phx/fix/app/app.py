@@ -1053,9 +1053,12 @@ class App(fix.Application, FixInterface):
         return message
 
     def market_data_request(
-            self, exchange_symbol_pairs, market_depth=0,
+            # exchange_symbol_pairs is list of tuple , tuple[0] is string of exchange name , and tuple[1] is string
+            # of symbol
+            self, exchange_symbol_pairs: List[Tuple[str, str]], market_depth=0,
             content="both", req_id=None,
-            subscription_request_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
+            subscription_request_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
+            is_aggregated_book: bool = True
     ) -> fix.Message:
         """
         Send request for book and/or trades. Full book is obtained with market_depth=0
@@ -1073,7 +1076,7 @@ class App(fix.Application, FixInterface):
         message.setField(fix.SubscriptionRequestType(subscription_request_type))
         message.setField(fix.MarketDepth(market_depth))
         message.setField(fix.MDUpdateType(fix.MDUpdateType_INCREMENTAL_REFRESH))
-        message.setField(fix.AggregatedBook(True))
+        message.setField(fix.AggregatedBook(is_aggregated_book))
 
         self.market_data_subscriptions[(req_id, subscription_request_type)] = (datetime.utcnow(), exchange_symbol_pairs)
 
