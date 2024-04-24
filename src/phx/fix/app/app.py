@@ -877,7 +877,7 @@ class App(fix.Application, FixInterface):
         return order, message
 
     def send_order_cancel_replace_request(self, orig_cl_ord_id: str, cl_ord_id: str, exchange: str, symbol: str,
-                                          side: int, order_qty: float, price: float = None, ord_type: int = None,
+                                          side: int, order_qty: float, price: float = None, ord_type: int | str = None,
                                           exec_instr: str = None, account: str = None) -> fix.Message:
         message = fix.Message()
         header = message.getHeader()
@@ -954,9 +954,9 @@ class App(fix.Application, FixInterface):
             exchange: str,
             symbol: str,
             cl_ord_id: str,
-            side: int,
-            order_id=None,
-            account=None
+            side: int | str,
+            order_id: str = None,
+            account: str = None
     ) -> fix.Message:
         """
         Send order status request.
@@ -1013,8 +1013,8 @@ class App(fix.Application, FixInterface):
             pos_req_id: str,
             symbol=None,
             currency=None,
-            pos_req_type=fix.PosReqType_POSITIONS,
-            account_type=fix.AccountType_ACCOUNT_IS_CARRIED_ON_CUSTOMER_SIDE_OF_BOOKS,
+            pos_req_type: int = fix.PosReqType_POSITIONS,
+            account_type: int = fix.AccountType_ACCOUNT_IS_CARRIED_ON_CUSTOMER_SIDE_OF_BOOKS,
             subscription_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
         """
@@ -1052,9 +1052,9 @@ class App(fix.Application, FixInterface):
     def trade_capture_report_request(
             self,
             trade_req_id: str,
-            exchange=None,
-            symbol=None,
-            trade_request_type=None,
+            exchange: str = None,
+            symbol: str = None,
+            trade_request_type: int = None,
             subscription_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
         message = fix.Message()
@@ -1105,7 +1105,7 @@ class App(fix.Application, FixInterface):
         return message
 
     def security_definition_request(self, exchange: str, symbol: str, req_id="req_id",
-                                    security_request_type=fix.SecurityRequestType_REQUEST_LIST_SECURITIES,
+                                    security_request_type: int=fix.SecurityRequestType_REQUEST_LIST_SECURITIES,
                                     subscription_request_type=None
                                     ) -> fix.Message:
         """
@@ -1152,7 +1152,8 @@ class App(fix.Application, FixInterface):
         message.setField(fix.SubscriptionRequestType(subscription_request_type))
         message.setField(fix.MarketDepth(market_depth))
         message.setField(fix.MDUpdateType(fix.MDUpdateType_INCREMENTAL_REFRESH))
-        message.setField(fix.AggregatedBook(is_aggregated_book))
+        if is_aggregated_book is not None:
+            message.setField(fix.AggregatedBook(is_aggregated_book))
 
         # TODO : believe that the market_data_subscriptions type hints has issue
         self.market_data_subscriptions[(req_id, subscription_request_type)] = (datetime.utcnow(), exchange_symbol_pairs)
