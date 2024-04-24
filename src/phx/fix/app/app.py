@@ -70,9 +70,9 @@ class App(fix.Application, FixInterface):
         self.clOrdID = 0
 
         # market data, positions subscription by request id, request type - datetime, [exchange, symbol]
-        self.market_data_subscriptions: Dict[Tuple[str, fix.MsgType], Tuple[datetime, List]] = {}
-        self.position_subscriptions: Dict[Tuple[str, fix.MsgType], Tuple[datetime, List]] = {}
-        self.trade_report_subscriptions: Dict[Tuple[str, fix.MsgType], Tuple[datetime, List]] = {}
+        self.market_data_subscriptions: Dict[Tuple[str, int | str], Tuple[datetime, List]] = {}
+        self.position_subscriptions: Dict[Tuple[str, int | str], Tuple[datetime, List]] = {}
+        self.trade_report_subscriptions: Dict[Tuple[str, int | str], Tuple[datetime, List]] = {}
 
         # plain message history
         self.received_admin_message_history: List[str] = []
@@ -1015,7 +1015,7 @@ class App(fix.Application, FixInterface):
             currency=None,
             pos_req_type: int = fix.PosReqType_POSITIONS,
             account_type: int = fix.AccountType_ACCOUNT_IS_CARRIED_ON_CUSTOMER_SIDE_OF_BOOKS,
-            subscription_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
+            subscription_type: int | str = fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
         """
         Send position request
@@ -1055,7 +1055,7 @@ class App(fix.Application, FixInterface):
             exchange: str = None,
             symbol: str = None,
             trade_request_type: int = None,
-            subscription_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
+            subscription_type: int | str = fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
         message = fix.Message()
         header = message.getHeader()
@@ -1083,8 +1083,8 @@ class App(fix.Application, FixInterface):
         return message
 
     def security_list_request(self, req_id="req_id", exchange: str = None,
-                              subscription_request_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
-                              security_list_request_type=fix.SecurityListRequestType_ALL_SECURITIES) -> fix.Message:
+                              subscription_request_type: int | str = fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
+                              security_list_request_type: int = fix.SecurityListRequestType_ALL_SECURITIES) -> fix.Message:
         """
         Send security list request
         """
@@ -1105,7 +1105,7 @@ class App(fix.Application, FixInterface):
         return message
 
     def security_definition_request(self, exchange: str, symbol: str, req_id="req_id",
-                                    security_request_type: int=fix.SecurityRequestType_REQUEST_LIST_SECURITIES,
+                                    security_request_type: int = fix.SecurityRequestType_REQUEST_LIST_SECURITIES,
                                     subscription_request_type=None
                                     ) -> fix.Message:
         """
@@ -1133,7 +1133,7 @@ class App(fix.Application, FixInterface):
             # of symbol
             self, exchange_symbol_pairs: List[Tuple[str, str]], market_depth: int = 0,
             content: str = "both", req_id: str = None,
-            subscription_request_type: int = fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
+            subscription_request_type: int | str = fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
             is_aggregated_book: bool = True
     ) -> fix.Message:
         """
@@ -1155,7 +1155,6 @@ class App(fix.Application, FixInterface):
         if is_aggregated_book is not None:
             message.setField(fix.AggregatedBook(is_aggregated_book))
 
-        # TODO : believe that the market_data_subscriptions type hints has issue
         self.market_data_subscriptions[(req_id, subscription_request_type)] = (datetime.utcnow(), exchange_symbol_pairs)
 
         if content == "book":
