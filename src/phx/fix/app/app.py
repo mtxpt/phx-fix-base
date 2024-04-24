@@ -834,8 +834,8 @@ class App(fix.Application, FixInterface):
         return message
 
     def order_cancel_replace_request(
-            self, order, order_qty, price=None, ord_type=None,
-            exec_instr=None, account=None
+            self, order: Order, order_qty: float, price: float = None, ord_type: int = None,
+            exec_instr: str = None, account: str = None
     ) -> Tuple[Order, fix.Message]:
         """
         Send order cancel replace request
