@@ -876,6 +876,39 @@ class App(fix.Application, FixInterface):
 
         return order, message
 
+    def send_order_cancel_replace_request(self, orig_cl_ord_id: str, cl_ord_id: str, exchange: str, symbol: str,
+                                          side: int, order_qty: float, price: float = None, ord_type: int = None,
+                                          exec_instr: str = None, account: str = None) -> fix.Message:
+        message = fix.Message()
+        header = message.getHeader()
+        header.setField(fix.MsgType(fix.MsgType_OrderCancelReplaceRequest))
+        if orig_cl_ord_id is not None:
+            message.setField(fix.OrigClOrdID(orig_cl_ord_id))
+        if cl_ord_id is not None:
+            message.setField(fix.ClOrdID(cl_ord_id))
+        if exchange is not None:
+            message.setField(fix.SecurityExchange(exchange))
+        if symbol is not None:
+            message.setField(fix.Symbol(symbol))
+        if side is not None:
+            message.setField(fix.Side(side))
+        if ord_type is not None:
+            message.setField(fix.OrdType(ord_type))
+        if order_qty is not None:
+            message.setField(fix.OrderQty(order_qty))
+        if price is not None:
+            message.setField(fix.Price(price))  # tick rounding has to be done in upper layer
+        if exec_instr is not None:
+            message.setField(fix.ExecInst(exec_instr))
+        if account is not None:
+            message.setField(fix.Account(account))
+
+        tx_time = fix.TransactTime()
+        tx_time.setString(datetime.utcnow().strftime("%Y%m%d-%H:%M:%S.%f")[:-3])
+        message.setField(tx_time)
+        self.send_message_to_session(message)
+        return message
+
     def order_mass_cancel_request(
             self,
             exchange: str = None,
