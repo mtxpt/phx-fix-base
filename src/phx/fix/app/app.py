@@ -983,9 +983,9 @@ class App(fix.Application, FixInterface):
             self,
             exchange: str,
             symbol: str,
-            account=None,
-            mass_status_req_id="working_orders",
-            mass_status_req_type=fix.MassStatusReqType_STATUS_FOR_ALL_ORDERS
+            account: str = None,
+            mass_status_req_id: str = "working_orders",
+            mass_status_req_type: int = fix.MassStatusReqType_STATUS_FOR_ALL_ORDERS
     ) -> fix.Message:
         """
         Send order mass status request
@@ -1154,6 +1154,7 @@ class App(fix.Application, FixInterface):
         message.setField(fix.MDUpdateType(fix.MDUpdateType_INCREMENTAL_REFRESH))
         message.setField(fix.AggregatedBook(is_aggregated_book))
 
+        # TODO : believe that the market_data_subscriptions type hints has issue
         self.market_data_subscriptions[(req_id, subscription_request_type)] = (datetime.utcnow(), exchange_symbol_pairs)
 
         if content == "book":
