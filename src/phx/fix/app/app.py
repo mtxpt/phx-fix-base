@@ -801,7 +801,8 @@ class App(fix.Application, FixInterface):
         return order, message
 
     def send_order_cancel_request(self, original_client_oid: str, exchange: str, order_quantity: float,
-                                  account: str, client_oid: str, text: str, symbol: str, order_id: str, side: int) -> fix.Message:
+                                  account: str, client_oid: str, text: str, symbol: str, order_id: str,
+                                  side: int) -> fix.Message:
         message = fix.Message()
         header = message.getHeader()
         header.setField(fix.MsgType(fix.MsgType_OrderCancelRequest))
@@ -833,8 +834,8 @@ class App(fix.Application, FixInterface):
         return message
 
     def order_cancel_replace_request(
-            self, order, order_qty, price=None, ord_type=None,
-            exec_instr=None, account=None
+            self, order: Order, order_qty: float, price: float = None, ord_type: int = None,
+            exec_instr: str = None, account: str = None
     ) -> Tuple[Order, fix.Message]:
         """
         Send order cancel replace request
@@ -875,14 +876,47 @@ class App(fix.Application, FixInterface):
 
         return order, message
 
+    def send_order_cancel_replace_request(self, orig_cl_ord_id: str, cl_ord_id: str, exchange: str, symbol: str,
+                                          side: int, order_qty: float, price: float = None, ord_type: int | str = None,
+                                          exec_instr: str = None, account: str = None) -> fix.Message:
+        message = fix.Message()
+        header = message.getHeader()
+        header.setField(fix.MsgType(fix.MsgType_OrderCancelReplaceRequest))
+        if orig_cl_ord_id is not None:
+            message.setField(fix.OrigClOrdID(orig_cl_ord_id))
+        if cl_ord_id is not None:
+            message.setField(fix.ClOrdID(cl_ord_id))
+        if exchange is not None:
+            message.setField(fix.SecurityExchange(exchange))
+        if symbol is not None:
+            message.setField(fix.Symbol(symbol))
+        if side is not None:
+            message.setField(fix.Side(side))
+        if ord_type is not None:
+            message.setField(fix.OrdType(ord_type))
+        if order_qty is not None:
+            message.setField(fix.OrderQty(order_qty))
+        if price is not None:
+            message.setField(fix.Price(price))  # tick rounding has to be done in upper layer
+        if exec_instr is not None:
+            message.setField(fix.ExecInst(exec_instr))
+        if account is not None:
+            message.setField(fix.Account(account))
+
+        tx_time = fix.TransactTime()
+        tx_time.setString(datetime.utcnow().strftime("%Y%m%d-%H:%M:%S.%f")[:-3])
+        message.setField(tx_time)
+        self.send_message_to_session(message)
+        return message
+
     def order_mass_cancel_request(
             self,
-            exchange=None,
-            symbol=None,
-            side=None,
-            currency=None,
-            security_type=None,
-            account=None,
+            exchange: str = None,
+            symbol: str = None,
+            side: int = None,
+            currency: str = None,
+            security_type: str = None,
+            account: str = None,
     ) -> fix.Message:
         """
         Send order mass cancel request
@@ -917,12 +951,12 @@ class App(fix.Application, FixInterface):
 
     def order_status_request(
             self,
-            exchange,
-            symbol,
-            cl_ord_id,
-            side,
-            order_id=None,
-            account=None
+            exchange: str,
+            symbol: str,
+            cl_ord_id: str,
+            side: int | str,
+            order_id: str = None,
+            account: str = None
     ) -> fix.Message:
         """
         Send order status request.
@@ -932,8 +966,10 @@ class App(fix.Application, FixInterface):
         header = message.getHeader()
         header.setField(fix.MsgType(fix.MsgType_OrderStatusRequest))
         message.setField(fix.OrdStatusReqID(self.generate_exec_id()))
-        message.setField(fix.SecurityExchange(exchange))
-        message.setField(fix.Symbol(symbol))
+        if exchange is not None:
+            message.setField(fix.SecurityExchange(exchange))
+        if symbol is not None:
+            message.setField(fix.Symbol(symbol))
         message.setField(fix.ClOrdID(cl_ord_id))
         message.setField(fix.Side(side))
         if order_id is not None:
@@ -945,11 +981,11 @@ class App(fix.Application, FixInterface):
 
     def order_mass_status_request(
             self,
-            exchange,
-            symbol,
-            account=None,
-            mass_status_req_id="working_orders",
-            mass_status_req_type=fix.MassStatusReqType_STATUS_FOR_ALL_ORDERS
+            exchange: str,
+            symbol: str,
+            account: str = None,
+            mass_status_req_id: str = "working_orders",
+            mass_status_req_type: int = fix.MassStatusReqType_STATUS_FOR_ALL_ORDERS
     ) -> fix.Message:
         """
         Send order mass status request
@@ -972,13 +1008,13 @@ class App(fix.Application, FixInterface):
 
     def request_for_positions(
             self,
-            exchange,
-            account,
-            pos_req_id,
+            exchange: str,
+            account: str,
+            pos_req_id: str,
             symbol=None,
             currency=None,
-            pos_req_type=fix.PosReqType_POSITIONS,
-            account_type=fix.AccountType_ACCOUNT_IS_CARRIED_ON_CUSTOMER_SIDE_OF_BOOKS,
+            pos_req_type: int = fix.PosReqType_POSITIONS,
+            account_type: int = fix.AccountType_ACCOUNT_IS_CARRIED_ON_CUSTOMER_SIDE_OF_BOOKS,
             subscription_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
         """
@@ -1015,10 +1051,10 @@ class App(fix.Application, FixInterface):
 
     def trade_capture_report_request(
             self,
-            trade_req_id,
-            exchange=None,
-            symbol=None,
-            trade_request_type=None,
+            trade_req_id: str,
+            exchange: str = None,
+            symbol: str = None,
+            trade_request_type: int = None,
             subscription_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
     ) -> fix.Message:
         message = fix.Message()
@@ -1068,7 +1104,10 @@ class App(fix.Application, FixInterface):
         self.send_message_to_session(message)
         return message
 
-    def security_definition_request(self, exchange, symbol, req_id="req_id") -> fix.Message:
+    def security_definition_request(self, exchange: str, symbol: str, req_id="req_id",
+                                    security_request_type: int=fix.SecurityRequestType_REQUEST_LIST_SECURITIES,
+                                    subscription_request_type=None
+                                    ) -> fix.Message:
         """
         Send security definition request
         """
@@ -1079,18 +1118,22 @@ class App(fix.Application, FixInterface):
         snd_time.setString(datetime.utcnow().strftime("%Y%m%d-%H:%M:%S.%f")[:-3])
         message.setField(snd_time)
         message.setField(fix.SecurityReqID(f"{req_id}_{self.next_request_id()}"))
-        message.setField(fix.SecurityRequestType(fix.SecurityRequestType_REQUEST_LIST_SECURITIES))
-        message.setField(fix.Symbol(symbol))
-        message.setField(fix.SecurityExchange(exchange))
+        message.setField(fix.SecurityRequestType(security_request_type))
+        if symbol is not None:
+            message.setField(fix.Symbol(symbol))
+        if exchange is not None:
+            message.setField(fix.SecurityExchange(exchange))
+        if subscription_request_type is not None:
+            message.setField(fix.SubscriptionRequestType(subscription_request_type))
         self.send_message_to_session(message)
         return message
 
     def market_data_request(
             # exchange_symbol_pairs is list of tuple , tuple[0] is string of exchange name , and tuple[1] is string
             # of symbol
-            self, exchange_symbol_pairs: List[Tuple[str, str]], market_depth=0,
-            content="both", req_id=None,
-            subscription_request_type=fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
+            self, exchange_symbol_pairs: List[Tuple[str, str]], market_depth: int = 0,
+            content: str = "both", req_id: str = None,
+            subscription_request_type: int = fix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
             is_aggregated_book: bool = True
     ) -> fix.Message:
         """
@@ -1109,8 +1152,10 @@ class App(fix.Application, FixInterface):
         message.setField(fix.SubscriptionRequestType(subscription_request_type))
         message.setField(fix.MarketDepth(market_depth))
         message.setField(fix.MDUpdateType(fix.MDUpdateType_INCREMENTAL_REFRESH))
-        message.setField(fix.AggregatedBook(is_aggregated_book))
+        if is_aggregated_book is not None:
+            message.setField(fix.AggregatedBook(is_aggregated_book))
 
+        # TODO : believe that the market_data_subscriptions type hints has issue
         self.market_data_subscriptions[(req_id, subscription_request_type)] = (datetime.utcnow(), exchange_symbol_pairs)
 
         if content == "book":
