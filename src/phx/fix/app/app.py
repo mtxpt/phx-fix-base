@@ -800,8 +800,8 @@ class App(fix.Application, FixInterface):
         self.send_message_to_session(message)
         return order, message
 
-    def send_order_cancel_request(self, original_client_oid: str, side: str, exchange: str, order_quantity: float,
-                                  account: str, client_oid: str, text: str, symbol: str, order_id: str) -> fix.Message:
+    def send_order_cancel_request(self, original_client_oid: str, exchange: str, order_quantity: float,
+                                  account: str, client_oid: str, text: str, symbol: str, order_id: str, side: int) -> fix.Message:
         message = fix.Message()
         header = message.getHeader()
         header.setField(fix.MsgType(fix.MsgType_OrderCancelRequest))
