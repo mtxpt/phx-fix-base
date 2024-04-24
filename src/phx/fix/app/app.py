@@ -14,6 +14,7 @@ from typing import AnyStr, Dict, List, Tuple
 
 import quickfix as fix
 import quickfix44 as fix44
+
 from phx.fix.app.config import FixAuthenticationMethod
 from phx.fix.app.interface import FixInterface
 from phx.fix.model.exec_report import ExecReport
@@ -798,6 +799,38 @@ class App(fix.Application, FixInterface):
 
         self.send_message_to_session(message)
         return order, message
+
+    def send_order_cancel_request(self, original_client_oid: str, side: str, exchange: str, order_quantity: float,
+                                  account: str, client_oid: str, text: str, symbol: str, order_id: str) -> fix.Message:
+        message = fix.Message()
+        header = message.getHeader()
+        header.setField(fix.MsgType(fix.MsgType_OrderCancelRequest))
+        if original_client_oid is not None:
+            message.setField(fix.OrigClOrdID(original_client_oid))
+        if side is not None:
+            message.setField(fix.Side(side))
+        if order_quantity is not None:
+            message.setField(fix.OrderQty(order_quantity))
+        if account is not None:
+            message.setField(fix.Account(account))
+        if symbol is not None:
+            message.setField(fix.Symbol(symbol))
+        if exchange is not None:
+            message.setField(fix.SecurityExchange(exchange))
+        if text is not None:
+            message.setField(fix.Text(text))
+        if order_id is not None:
+            message.setField(fix.OrderID(order_id))
+        if client_oid is not None:
+            message.setField(fix.ClOrdID(client_oid))
+
+        tx_time = fix.TransactTime()
+        tx_time.setString(datetime.utcnow().strftime("%Y%m%d-%H:%M:%S.%f")[:-3])
+        message.setField(tx_time)
+
+        self.send_message_to_session(message)
+
+        return message
 
     def order_cancel_replace_request(
             self, order, order_qty, price=None, ord_type=None,
