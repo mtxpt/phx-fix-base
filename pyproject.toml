@@ -35,5 +35,6 @@ dependencies = [
     "tomli",
     "tomli-w",
     "deepdiff",
-    "prometheus_client"
+    "prometheus_client",
+    "eventkit"
 ]
