@@ -115,8 +115,8 @@ class PhxApi(ApiInterface, abc.ABC):
         self.position_report_counter: Dict[Ticker, int] = dict()
         self.mass_status_exec_reports = []
 
-        # events for order updates
-        self.on_order_update_event = ev.Event()
+        # event for keeping track of updates in orders and orderbooks
+        self.on_event = ev.Event()
 
         # order books
         self.order_books: Dict[Ticker, OrderBook] = {}
@@ -514,7 +514,7 @@ class PhxApi(ApiInterface, abc.ABC):
         else:
             num_open_orders_before = len(self.order_tracker.open_orders)
             order, error = self.order_tracker.process(msg, utcnow())
-            self.on_order_update_event.emit(order)
+            self.on_event.emit(order)
             # if we canceled all open orders -> store the fix message history
             if (
                 self.to_stop
@@ -579,9 +579,11 @@ class PhxApi(ApiInterface, abc.ABC):
         self.logger.info(f"on_order_book_snapshot: {ticker} \n{str(msg)}")
         if ticker not in self.dependency_actions[DependencyAction.ORDERBOOK_SNAPSHOTS]:
             self.dependency_actions[DependencyAction.ORDERBOOK_SNAPSHOTS].append(ticker)
-        self.order_books[ticker] = OrderBook(
+        book = OrderBook(
             msg.exchange, msg.symbol, msg.bids, msg.asks, msg.exchange_ts, msg.local_ts
         )
+        self.order_books[ticker] = book
+        self.on_event.emit(book)
 
     def on_order_book_update(self, msg: OrderBookUpdate):
         self.logger.debug(
@@ -592,6 +594,7 @@ class PhxApi(ApiInterface, abc.ABC):
         if book is not None:
             for price, quantity, is_bid in msg.updates:
                 book.update(price, quantity, is_bid)
+            self.on_event.emit(book)
 
     def on_trades(self, msg: Trades):
         pass
