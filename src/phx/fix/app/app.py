@@ -1171,6 +1171,16 @@ class App(fix.Application, FixInterface):
             group_trade = fix44.MarketDataRequest().NoMDEntryTypes()
             group_trade.setField(fix.MDEntryType(fix.MDEntryType_TRADE))
             message.addGroup(group_trade)
+        elif content == "bid":
+            message.setField(fix.NoMDEntryTypes(1))
+            group_bid = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_bid.setField(fix.MDEntryType(fix.MDEntryType_BID))
+            message.addGroup(group_bid)
+        elif content == "ask":
+            message.setField(fix.NoMDEntryTypes(1))
+            group_ask = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_ask.setField(fix.MDEntryType(fix.MDEntryType_OFFER))
+            message.addGroup(group_ask)
         elif content == "both":
             message.setField(fix.NoMDEntryTypes(3))
             group_bid = fix44.MarketDataRequest().NoMDEntryTypes()
