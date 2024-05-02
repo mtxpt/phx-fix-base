@@ -1160,29 +1160,35 @@ class App(fix.Application, FixInterface):
 
         if content == "book":
             message.setField(fix.NoMDEntryTypes(2))
-            group = fix44.MarketDataRequest().NoMDEntryTypes()
-            group.setField(fix.MDEntryType(fix.MDEntryType_BID))
-            group.setField(fix.MDEntryType(fix.MDEntryType_OFFER))
-            message.addGroup(group)
+            group_bid = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_bid.setField(fix.MDEntryType(fix.MDEntryType_BID))
+            message.addGroup(group_bid)
+            group_ask = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_ask.setField(fix.MDEntryType(fix.MDEntryType_OFFER))
+            message.addGroup(group_ask)
         elif content == "trade":
             message.setField(fix.NoMDEntryTypes(1))
-            group = fix44.MarketDataRequest().NoMDEntryTypes()
-            group.setField(fix.MDEntryType(fix.MDEntryType_TRADE))
-            message.addGroup(group)
+            group_trade = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_trade.setField(fix.MDEntryType(fix.MDEntryType_TRADE))
+            message.addGroup(group_trade)
         elif content == "both":
             message.setField(fix.NoMDEntryTypes(3))
-            group = fix44.MarketDataRequest().NoMDEntryTypes()
-            group.setField(fix.MDEntryType(fix.MDEntryType_BID))
-            group.setField(fix.MDEntryType(fix.MDEntryType_OFFER))
-            group.setField(fix.MDEntryType(fix.MDEntryType_TRADE))
-            message.addGroup(group)
+            group_bid = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_bid.setField(fix.MDEntryType(fix.MDEntryType_BID))
+            message.addGroup(group_bid)
+            group_ask = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_ask.setField(fix.MDEntryType(fix.MDEntryType_OFFER))
+            message.addGroup(group_ask)
+            group_trade = fix44.MarketDataRequest().NoMDEntryTypes()
+            group_trade.setField(fix.MDEntryType(fix.MDEntryType_TRADE))
+            message.addGroup(group_trade)
         else:
             raise Exception(f"content {content} not supported")
 
         ns = len(exchange_symbol_pairs)
         message.setField(fix.NoRelatedSym(ns))  # tag 146
-        group = fix44.MarketDataRequest().NoRelatedSym()
         for (exchange, symbol) in exchange_symbol_pairs:
+            group = fix44.MarketDataRequest().NoRelatedSym()
             group.setField(fix.Symbol(symbol))
             group.setField(fix.SecurityExchange(exchange))
             message.addGroup(group)
