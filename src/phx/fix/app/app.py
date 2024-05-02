@@ -1187,8 +1187,8 @@ class App(fix.Application, FixInterface):
 
         ns = len(exchange_symbol_pairs)
         message.setField(fix.NoRelatedSym(ns))  # tag 146
-        group = fix44.MarketDataRequest().NoRelatedSym()
         for (exchange, symbol) in exchange_symbol_pairs:
+            group = fix44.MarketDataRequest().NoRelatedSym()
             group.setField(fix.Symbol(symbol))
             group.setField(fix.SecurityExchange(exchange))
             message.addGroup(group)
