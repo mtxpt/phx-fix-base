@@ -79,6 +79,7 @@ class PhxApi(ApiInterface, abc.ABC):
         self.config: dict = config or {}
         self.mkt_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in mkt_symbols])
         self.trading_symbols: Set[Ticker] = set([(exchange, symbol) for symbol in trading_symbols])
+        self.set_of_symbol_names = {symbol[1] for symbol in self.mkt_symbols.union(self.trading_symbols)}
         self.exchange = exchange
 
         # algo callbacks to be called when object of specific class arrives from FIX queue
@@ -172,7 +173,10 @@ class PhxApi(ApiInterface, abc.ABC):
                 # call internal handler
                 match msg:
                     case OrderBookUpdate():
-                        self.on_order_book_update(msg)
+                        if msg.symbol in self.set_of_symbol_names:
+                            self.on_order_book_update(msg)
+                        else:
+                            continue
                     case Trades():
                         self.on_trades(msg)
                     case ExecReport():
@@ -194,7 +198,10 @@ class PhxApi(ApiInterface, abc.ABC):
                     case OrderCancelReject():
                         self.on_order_cancel_reject(msg)
                     case OrderBookSnapshot():
-                        self.on_order_book_snapshot(msg)
+                        if msg.symbol in self.set_of_symbol_names:
+                            self.on_order_book_snapshot(msg)
+                        else:
+                            continue
                     case SecurityReport():
                         self.on_security_report(msg)
                     case PositionRequestAck():
