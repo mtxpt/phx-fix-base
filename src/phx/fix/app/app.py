@@ -38,6 +38,7 @@ from phx.fix.utils import (
 )
 from phx.utils import make_dirs_for_file
 from phx.utils.utils import str_to_datetime
+from phx.utils.time import dt_now_utc
 
 REJECT_TEXT_GATEWAY_NOT_READY = "GATEWAY_NOT_READY"
 
@@ -409,7 +410,8 @@ class App(fix.Application, FixInterface):
 
         Should usually not get any trade updates but not sure.
         """
-        receive_ts = extract_message_field_value(fix.SendingTime(), message, "datetime")
+        #receive_ts = extract_message_field_value(fix.SendingTime(), message, "datetime")
+        receive_ts = dt_now_utc()
         exchange = extract_message_field_value(fix.SecurityExchange(), message, "str")
         symbol = extract_message_field_value(fix.Symbol(), message, "str")
         group = fix44.MarketDataSnapshotFullRefresh.NoMDEntries()
@@ -471,7 +473,8 @@ class App(fix.Application, FixInterface):
             2 = Trade (fix.MDEntryType_TRADE)
         """
         fn = "on_market_data_refresh_incremental"
-        receive_ts = extract_message_field_value(fix.SendingTime(), message, "datetime")
+        # receive_ts = extract_message_field_value(fix.SendingTime(), message, "datetime")
+        receive_ts = dt_now_utc()
         group = fix44.MarketDataIncrementalRefresh.NoMDEntries()
         group_size = extract_message_field_value(fix.NoMDEntries(), message, "int")
 
@@ -481,7 +484,7 @@ class App(fix.Application, FixInterface):
         book_update = None
         book_updates: Dict[Tuple[str, str], OrderBookUpdate] = {}
         trades: List[Trade] = []
-        timestamp = datetime.utcnow()
+        #timestamp = datetime.utcnow()
 
         for i in range(group_size):
             message.getGroup(i + 1, group)
@@ -497,7 +500,7 @@ class App(fix.Application, FixInterface):
             element_ts = str_to_datetime(f"{date_str}-{time_str}")  # TODO clarify diff between element_ts / receive_ts
 
             if entry_type == fix.MDEntryType_TRADE:
-                trades.append(Trade(exchange, symbol, timestamp, receive_ts, side, price, size))
+                trades.append(Trade(exchange, symbol, element_ts, receive_ts, side, price, size))
             else:
                 self.logger.debug(
                     f"{fn} {exchange=} {symbol=} "
@@ -506,7 +509,7 @@ class App(fix.Application, FixInterface):
                 if book_key != (exchange, symbol):
                     book_key = (exchange, symbol)
                     if book_key not in book_updates:
-                        book_updates[book_key] = OrderBookUpdate(exchange, symbol, timestamp, receive_ts)
+                        book_updates[book_key] = OrderBookUpdate(exchange, symbol, element_ts, receive_ts)
                     book_update = book_updates[book_key]
                     self.logger.debug(
                         f"{fn} set book_update {book_key=} update:{str(book_update)}"
