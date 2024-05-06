@@ -176,6 +176,7 @@ class PhxApi(ApiInterface, abc.ABC):
                         if msg.symbol in self.set_of_symbol_names:
                             self.on_order_book_update(msg)
                         else:
+                            self.logger.info(f"Subscription to orderbooks for wrong symbols: symbol = {msg.symbol}")
                             continue
                     case Trades():
                         self.on_trades(msg)
@@ -201,6 +202,7 @@ class PhxApi(ApiInterface, abc.ABC):
                         if msg.symbol in self.set_of_symbol_names:
                             self.on_order_book_snapshot(msg)
                         else:
+                            self.logger.info(f"Subscription to orderbooks for wrong symbols: symbol = {msg.symbol}")
                             continue
                     case SecurityReport():
                         self.on_security_report(msg)
