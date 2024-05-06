@@ -601,6 +601,10 @@ class PhxApi(ApiInterface, abc.ABC):
         if book is not None:
             for price, quantity, is_bid in msg.updates:
                 book.update(price, quantity, is_bid)
+            if msg.exchange_ts is not None:
+                book.exchange_ts = msg.exchange_ts
+            if msg.local_ts is not None:
+                book.local_ts = msg.local_ts
             self.on_event.emit(book)
 
     def on_trades(self, msg: Trades):
