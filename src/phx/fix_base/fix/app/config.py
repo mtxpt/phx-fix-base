@@ -84,7 +84,7 @@ def create_session_settings(self, filename: str, data_sub_dir: str = None, setti
         make_dirs(self.log_dir)
         make_dirs(self.session_dir)
         make_dirs(self.export_dir)
-        set_settings_content(mod_content, "DataDictionary", self.root / "phx/fix/specs/FIX44.xml")
+        set_settings_content(mod_content, "DataDictionary", self.root / "phx/fix_base/fix/specs/FIX44.xml")
         set_settings_content(mod_content, "FileLogPath", self.log_dir)
         set_settings_content(mod_content, "FileStorePath", self.session_dir)
         fix_settings_file = str(self.data_dir / Path(filename).name)
@@ -95,7 +95,7 @@ def create_session_settings(self, filename: str, data_sub_dir: str = None, setti
 
 class FixSessionConfig(object):
 
-    FIX_SCHEMA_DICT = "src/phx/fix/specs/FIX44.xml"
+    FIX_SCHEMA_DICT = "src/phx/fix_base/fix/specs/FIX44.xml"
 
     def __init__(
             self,
