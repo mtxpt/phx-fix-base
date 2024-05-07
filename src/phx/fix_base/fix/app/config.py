@@ -2,8 +2,8 @@ from typing import Optional, List, Callable, Union
 from pathlib import Path
 import quickfix as fix
 
-from phx.fix_base.fix_base.fix.model.auth import FixAuthenticationMethod
-from phx.fix_base.fix_base.utils import make_dirs, make_dirs_for_file
+from phx.fix_base.fix.model.auth import FixAuthenticationMethod
+from phx.fix_base.utils import make_dirs, make_dirs_for_file
 from phx.fix_base.fix.utils import dict_to_fix_dict, fix_session_default_config, fix_session_config
 
 

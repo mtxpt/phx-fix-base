@@ -2,7 +2,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Tuple
 
-from phx.fix_base.model.trade import Trade
+from phx.fix_base.fix.model.trade import Trade
 from phx.fix_base.utils import TO_PIPS
 
 
