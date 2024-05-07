@@ -3,7 +3,7 @@ import quickfix as fix
 from typing import List, Dict, Any
 from tabulate import tabulate
 
-from phx.fix.utils import order_type_to_string, side_to_string, order_status_to_string, time_in_force_to_string
+from phx.fix_base.fix.utils import order_type_to_string, side_to_string, order_status_to_string, time_in_force_to_string
 
 
 class Order:

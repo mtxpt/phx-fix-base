@@ -2,8 +2,8 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Tuple
 
-from phx.model.trade import Trade
-from phx.utils import TO_PIPS
+from phx.fix_base.model.trade import Trade
+from phx.fix_base.utils import TO_PIPS
 
 
 class StreamingMovingAverageByCount(object):

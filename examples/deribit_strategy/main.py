@@ -4,9 +4,9 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
-from phx.fix.app import App, AppRunner, FixSessionConfig
-from phx.fix.model.auth import FixAuthenticationMethod
-from phx.utils import make_dirs, set_file_loging_handler, setup_logger
+from phx.fix_base.fix.app import App, AppRunner, FixSessionConfig
+from phx.fix_base.fix.model.auth import FixAuthenticationMethod
+from phx.fix_base.utils import make_dirs, set_file_loging_handler, setup_logger
 
 from strategy import DeribitTestStrategy
 

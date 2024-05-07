@@ -3,8 +3,8 @@ import tomli
 from pathlib import Path
 from typing import List
 
-from phx.utils.logger import setup_logger
-from phx.utils.file import make_dirs_for_file
+from phx.fix_base.utils.logger import setup_logger
+from phx.fix_base.utils.file import make_dirs_for_file
 
 
 class PathBase(object):

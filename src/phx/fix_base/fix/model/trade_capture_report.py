@@ -2,7 +2,7 @@ import pandas as pd
 from typing import List, Any
 from tabulate import tabulate
 
-from phx.fix.model.message import Message
+from phx.fix_base.fix.model.message import Message
 
 
 class TradeReportParty(object):

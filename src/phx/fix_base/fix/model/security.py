@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 
-from phx.fix.model.message import Message
+from phx.fix_base.fix.model.message import Message
 
 
 class Security(object):
