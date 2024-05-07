@@ -4,6 +4,7 @@ import threading
 from enum import Enum
 from logging import Logger
 from typing import Any, Callable, List, Set, Dict, Tuple, Union, Optional
+from collections import namedtuple
 
 import pandas as pd
 import quickfix as fix
@@ -27,28 +28,29 @@ from phx.fix_base.utils.thread import AlignedRepeatingTimer
 from phx.fix_base.utils.time import utcnow, dt_now_utc
 
 
-# from phx.fix_base.utils.price_utils import RoundingDirection, price_round, price_round_down, price_round_up
 
+QueueInfo = namedtuple('QueueInfo', ['length', 'received_admin_message_size', 'received_app_message_size',
+                                     'sent_admin_message_size', 'sent_app_message_size'])
 
-def single_task(key, target_dict, current_dict, pre="  ") -> List[str]:
-    rows = []
-    if key in target_dict.keys():
-        if key in current_dict.keys():
-            rows.append(f"{pre}{CROSS_MARK} {key}")
-        else:
-            rows.append(f"{pre}{CHECK_MARK} {key} ")
-    return rows
-
-
-def set_task(key, target_dict, current_dict, pre="  ") -> List[str]:
-    rows = []
-    target_set = target_dict.get(key, None)
-    if target_set is not None:
-        remaining_set = current_dict.get(key, {})
-        for task in target_set:
-            mark = CROSS_MARK if task in remaining_set else CHECK_MARK
-            rows.append(f"{pre}{mark} {key}[{task}]")
-    return rows
+# def single_task(key, target_dict, current_dict, pre="  ") -> List[str]:
+#     rows = []
+#     if key in target_dict.keys():
+#         if key in current_dict.keys():
+#             rows.append(f"{pre}{CROSS_MARK} {key}")
+#         else:
+#             rows.append(f"{pre}{CHECK_MARK} {key} ")
+#     return rows
+#
+#
+# def set_task(key, target_dict, current_dict, pre="  ") -> List[str]:
+#     rows = []
+#     target_set = target_dict.get(key, None)
+#     if target_set is not None:
+#         remaining_set = current_dict.get(key, {})
+#         for task in target_set:
+#             mark = CROSS_MARK if task in remaining_set else CHECK_MARK
+#             rows.append(f"{pre}{mark} {key}[{task}]")
+#     return rows
 
 
 class DependencyAction(str, Enum):
@@ -116,7 +118,7 @@ class PhxApi(ApiInterface, abc.ABC):
         self.position_report_counter: Dict[Ticker, int] = dict()
         self.mass_status_exec_reports = []
 
-        # event for keeping track of updates in orders and orderbooks
+        # event object for keeping track of queue info and updates in orders and orderbooks
         self.on_event = ev.Event()
 
         # order books
@@ -127,13 +129,17 @@ class PhxApi(ApiInterface, abc.ABC):
 
         # timers and threads
         self.timers_started = False
-        self.timer_interval = pd.Timedelta(self.config.get("timer_interval", "01:00:00"))
-        self.timer_alignment_freq = self.config.get("timer_alignment_freq", "1h")
-        self.recurring_timer = AlignedRepeatingTimer(
-            self.timer_interval,
-            self.on_timer,
-            name="strategy_timer",
-            alignment_freq=self.timer_alignment_freq
+        self.slow_recurring_timer = AlignedRepeatingTimer(
+            pd.Timedelta("01:00:00"),
+            self.on_slow_timer,
+            name="slow_timer",
+            alignment_freq="1h"
+        )
+        self.fast_recurring_timer = AlignedRepeatingTimer(
+            pd.Timedelta("00:00:20"),
+            self.on_fast_timer,
+            name="fast_timer",
+            alignment_freq="20s"
         )
         self.run_thread = threading.Thread(name='RunApi', target=self.run, args=())
 
@@ -238,7 +244,7 @@ class PhxApi(ApiInterface, abc.ABC):
                 self.exec_state_evaluation()
         self.logger.info("dispatch loop terminated")
         try:
-            self.stop_timer_thread()
+            self.stop_timer_threads()
             self.fix_interface.save_fix_message_history(pre=self.file_name_prefix())
         except Exception as e:
             self.logger.exception(f"failed to save fix message history: {e}")
@@ -385,23 +391,35 @@ class PhxApi(ApiInterface, abc.ABC):
 
     def start_threads(self):
         self.logger.info(f"start_threads...")
-        self.recurring_timer.start()
+        self.slow_recurring_timer.start()
+        self.fast_recurring_timer.start()
         self.run_thread.start()
         self.timers_started = True
 
-    def stop_timer_thread(self):
+    def stop_timer_threads(self):
         if self.timers_started:
             self.logger.info(f"stopping threads...")
-            if self.recurring_timer.is_alive():
-                self.recurring_timer.cancel()
-                self.recurring_timer.join()
+            if self.slow_recurring_timer.is_alive():
+                self.slow_recurring_timer.cancel()
+                self.slow_recurring_timer.join()
+            if self.fast_recurring_timer.is_alive():
+                self.fast_recurring_timer.cancel()
+                self.fast_recurring_timer.join()
+            self.timers_started = False
             self.logger.info(f"timers stopped")
 
     # Callback function for pulling queue messages
-    def on_timer(self):
+    def on_slow_timer(self):
         self.logger.info(f"saving dataframes and purging history")
         self.fix_interface.save_fix_message_history(pre=self.file_name_prefix(), purge_history=True)
         self.logger.info(f"   \u2705 saved and purged fix message history")
+
+    def on_fast_timer(self):
+        q = self.message_queue
+        queue_info = QueueInfo(q.qsize(), len(q.received_admin_message_history),
+                               len(q.received_app_message_history), len(q.sent_admin_message_history),
+                               len(q.sent_app_message_history))
+        self.on_event.emit(queue_info)
 
     def on_logon(self, msg: Logon):
         self.logged_in = True
