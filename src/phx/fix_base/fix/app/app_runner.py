@@ -1,7 +1,7 @@
 import logging
 
 import quickfix as fix
-from phx.fix.app import App
+from phx.fix_base.fix.app import App
 
 
 class AppRunner(object):

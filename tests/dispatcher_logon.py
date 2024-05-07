@@ -4,9 +4,9 @@ import threading
 import logging
 from pathlib import Path
 
-from phx.fix.app import App, AppRunner, FixSessionConfig
-from phx.fix.model import Create, Logon, Logout, FixAuthenticationMethod
-from phx.utils import setup_logger, set_file_loging_handler, make_dirs
+from phx.fix_base.fix.app import App, AppRunner, FixSessionConfig
+from phx.fix_base.fix.model import Create, Logon, Logout, FixAuthenticationMethod
+from phx.fix_base.utils import setup_logger, set_file_loging_handler, make_dirs
 
 
 def temp_dir() -> Path:

@@ -6,12 +6,12 @@ from logging import Logger
 import pandas as pd
 import quickfix as fix
 # Phx modules
-from phx.api import DependencyAction, PhxApi
-from phx.fix.app import AppRunner
-from phx.fix.utils import fix_message_string, flip_trading_dir
-from phx.utils import TO_PIPS
-from phx.utils.price_utils import price_round_down, price_round_up
-from phx.utils.time import utcnow
+from phx.fix_base.api import DependencyAction, PhxApi
+from phx.fix_base.fix.app import AppRunner
+from phx.fix_base.fix.utils import fix_message_string, flip_trading_dir
+from phx.fix_base.utils import TO_PIPS
+from phx.fix_base.utils.price_utils import price_round_down, price_round_up
+from phx.fix_base.utils.time import utcnow
 
 class TradingMode(str, Enum):
     MARKET_ORDERS = "market_orders"

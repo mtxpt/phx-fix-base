@@ -4,7 +4,7 @@ from sortedcontainers import SortedDict
 from typing import Optional, Tuple, List
 from tabulate import tabulate
 
-from phx.fix.model.message import Message
+from phx.fix_base.fix.model.message import Message
 
 
 def price_impact(prices: npt.ArrayLike, cum_vols: npt.ArrayLike,

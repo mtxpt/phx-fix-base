@@ -1,7 +1,7 @@
 import abc
 from typing import Union
 
-from phx.fix.model import (
+from phx.fix_base.fix.model import (
     BusinessMessageReject, Create, ExecReport, GatewayNotReady, Heartbeat, Logon, Logout,
     MarketDataRequestReject, MassStatusExecReport, MassStatusExecReportNoOrders, NotConnected,
     OrderBookSnapshot, OrderBookUpdate, OrderMassCancelReport, PositionReports, PositionRequestAck,

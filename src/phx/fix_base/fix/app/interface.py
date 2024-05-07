@@ -3,7 +3,7 @@ from typing import List, Dict, Tuple, AnyStr
 
 import quickfix as fix
 
-from phx.fix.model.order import Order
+from phx.fix_base.fix.model.order import Order
 
 
 class FixInterface(abc.ABC):

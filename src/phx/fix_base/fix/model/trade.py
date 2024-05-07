@@ -1,7 +1,7 @@
 from typing import List
 
-from phx.fix.utils import side_to_string
-from phx.fix.model.message import Message
+from phx.fix_base.fix.utils import side_to_string
+from phx.fix_base.fix.model.message import Message
 
 
 class Trade:

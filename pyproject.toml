@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["phx.api", "phx.fix", "phx.fix.app", "phx.fix.model", "phx.fix.tracker", "phx.fix.utils", "phx.utils"]
+include = ["phx.fix_base.api", "phx.fix_base.fix", "phx.fix_base.fix.app", "phx.fix_base.fix.model", "phx.fix_base.fix.tracker", "phx.fix_base.fix.utils", "phx.fix_base.utils"]
 
 [project]
 name = "phx-fix-base"

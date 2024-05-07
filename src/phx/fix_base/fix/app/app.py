@@ -15,30 +15,30 @@ from typing import AnyStr, Dict, List, Tuple
 import quickfix as fix
 import quickfix44 as fix44
 
-from phx.fix.app.config import FixAuthenticationMethod
-from phx.fix.app.interface import FixInterface
-from phx.fix.model.exec_report import ExecReport
-from phx.fix.model.message import (
+from phx.fix_base.fix.app.config import FixAuthenticationMethod
+from phx.fix_base.fix.app.interface import FixInterface
+from phx.fix_base.fix.model.exec_report import ExecReport
+from phx.fix_base.fix.model.message import (
     BusinessMessageReject, Create, GatewayNotReady, Heartbeat, Logon, Logout,
     MarketDataRequestReject, Message, NotConnected, OrderCancelReject,
     OrderMassCancelReport, PositionRequestAck, Reject, TradeCaptureReportRequestAck
 )
-from phx.fix.model.order import Order
-from phx.fix.model.order_book import OrderBookSnapshot, OrderBookUpdate
-from phx.fix.model.position_report import Position, PositionReport, PositionReports
-from phx.fix.model.security import Security, SecurityReport
-from phx.fix.model.trade import Trade, Trades
-from phx.fix.model.trade_capture_report import (
+from phx.fix_base.fix.model.order import Order
+from phx.fix_base.fix.model.order_book import OrderBookSnapshot, OrderBookUpdate
+from phx.fix_base.fix.model.position_report import Position, PositionReport, PositionReports
+from phx.fix_base.fix.model.security import Security, SecurityReport
+from phx.fix_base.fix.model.trade import Trade, Trades
+from phx.fix_base.fix.model.trade_capture_report import (
     TradeCaptureReport, TradeReport, TradeReportParty, TradeReportSide
 )
-from phx.fix.utils import (
+from phx.fix_base.fix.utils import (
     cxl_rej_reason_to_string, cxl_rej_response_to_to_string, entry_type_to_str,
     extract_message_field_value, fix_message_string, mass_cancel_reject_reason_to_string,
     mass_cancel_request_type_to_string, msg_type_to_string, session_reject_reason_to_string
 )
-from phx.utils import make_dirs_for_file
-from phx.utils.utils import str_to_datetime
-from phx.utils.time import dt_now_utc
+from phx.fix_base.utils import make_dirs_for_file
+from phx.fix_base.utils.utils import str_to_datetime
+from phx.fix_base.utils.time import dt_now_utc
 
 REJECT_TEXT_GATEWAY_NOT_READY = "GATEWAY_NOT_READY"
 
