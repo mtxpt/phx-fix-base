@@ -18,7 +18,7 @@ def temp_dir() -> Path:
 
 def fix_schema_file() -> Path:
     local = Path(__file__).parent.resolve()
-    return str(local.parent.parent.absolute() / "src" / "phx" / "fix" / "specs" / "FIX44.xml")
+    return str(local.parent.parent.absolute() / "src" / "phx" / "fix_base" / "fix" / "specs" / "FIX44.xml")
 
 
 if __name__ == "__main__":

@@ -1,1 +1,1 @@
-include src/phx/fix/specs/FIX44.xml
+include src/phx/fix_base/fix/specs/FIX44.xml
