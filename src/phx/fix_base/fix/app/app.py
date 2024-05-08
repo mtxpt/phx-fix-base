@@ -634,6 +634,11 @@ class App(fix.Application, FixInterface):
             reports = self.trade_reports
             self.trade_reports = []
             self.message_queue.put(TradeCaptureReport(reports), block=False)
+        if len(self.trade_reports) > tot_num_trade_reports:
+            self.logger.error(
+                f"on_trade_capture_report num trade_reports in list:{len(self.trade_reports)}"
+                f"> {tot_num_trade_reports=}"
+            )
 
     def on_security_list(self, message, sending_time):
         """
